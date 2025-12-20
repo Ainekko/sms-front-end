@@ -18,7 +18,7 @@ export const config = {
      * Loaded from VITE_API_BASE_URL environment variable
      * Example: 'http://localhost:8000' or 'http://127.0.0.1:5000'
      */
-    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000',
+    apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
 
     /**
      * API version prefix used for all REST endpoints
@@ -39,11 +39,19 @@ export const config = {
      * Loaded from VITE_WS_BASE_URL environment variable
      * Client ID will be appended: ws://host/ws/{clientId}
      */
-    wsBaseUrl: import.meta.env.VITE_WS_BASE_URL || 'ws://127.0.0.1:5000/ws',
+    get wsBaseUrl(): string {
+        let url = import.meta.env.VITE_WS_BASE_URL || 'ws://127.0.0.1:8000/ws';
+
+        // Fix common misconfiguration where wss:// becomes ws// or wss// (missing colon)
+        // We force wss:// in these cases as it's likely a production env error
+        if (url.startsWith('ws//') || url.startsWith('wss//')) {
+            return url.replace(/^(ws|wss)\/\//, 'wss://');
+        }
+
+        return url;
+    },
 
     /**
-     * Get the full WebSocket URL with client ID
-     * @param clientId - Unique identifier for this WebSocket connection
      * @returns Full WebSocket URL with client ID
      */
     getWsUrl(clientId: string): string {
