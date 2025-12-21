@@ -85,3 +85,42 @@ export {
     type ToastType,
     type UIState
 } from './uiStore';
+
+// =============================================================================
+// Brands Store
+// =============================================================================
+// Manages brands and brand selection
+
+export {
+    brandsStore,
+    selectedBrand,
+    brands,
+    brandContacts,
+    isLoadingBrands,
+    loadBrands,
+    selectBrand,
+    createBrand,
+    updateBrand,
+    deleteBrand,
+    loadBrandContacts,
+    type Brand,
+    type BrandContact,
+    type BrandsState
+} from './brandsStore';
+
+// =============================================================================
+// Contacts Store
+// =============================================================================
+// Manages contact operations
+
+export {
+    contactsStore,
+    isContactOperationLoading,
+    createContact,
+    addContactToBrand,
+    removeContactFromBrand,
+    getContact,
+    type Contact,
+    type ContactsState
+} from './contactsStore';
+

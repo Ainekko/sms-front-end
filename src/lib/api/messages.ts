@@ -35,6 +35,9 @@ export interface SendMessageRequest {
 
     /** Message content to send */
     message: string;
+
+    /** Optional brand ID to send from (uses brand's phone number) */
+    brand_id?: string;
 }
 
 /**
@@ -180,21 +183,31 @@ class MessagesApiClient {
      * 
      * @param toNumber - Phone number to send to (E.164 format, e.g., +1234567890)
      * @param message - Message content to send (max 1600 characters)
+     * @param brandId - Optional brand ID to send from (uses brand's phone number)
      * @returns Promise resolving to SendMessageResponse
      * @throws Error if sending fails
      * 
      * @example
+     *   // Send with default phone
      *   const result = await messagesApi.sendMessage('+1234567890', 'Hello!');
-     *   console.log(`Message SID: ${result.message_sid}`);
+     *   
+     *   // Send from a specific brand
+     *   const result = await messagesApi.sendMessage('+1234567890', 'Hello!', 'brand-uuid');
      */
     async sendMessage(
         toNumber: string,
-        message: string
+        message: string,
+        brandId?: string
     ): Promise<SendMessageResponse> {
         const body: SendMessageRequest = {
             to_number: toNumber,
             message: message
         };
+
+        // Add brand_id if provided
+        if (brandId) {
+            body.brand_id = brandId;
+        }
 
         return this.request<SendMessageResponse>('/send', {
             method: 'POST',

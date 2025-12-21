@@ -1,30 +1,48 @@
 <!--
   BrandHeader Component
   ======================
-  Displays the application header with brand name and connection status.
+  Application header with brand selection, action buttons, and connection status.
   
   This component:
-  - Shows the brand/company name
-  - Displays real-time WebSocket connection status
-  - Changes indicator color based on connection state
-  - Shows reconnection attempts when applicable
+  - Brand selector dropdown on the left
+  - Action buttons (Bulk Send, Contacts)
+  - Real-time WebSocket connection status on the right
+  - Error banner for connection issues
   
-  Props: None
+  Props:
+    None
   
-  Events: None
+  Events:
+    openBrandManager - Request to open brand manager modal
+    openBulkMessage - Request to open bulk message modal
+    openContacts - Request to open contacts panel
   
   Usage:
-    <BrandHeader />
+    <BrandHeader 
+      on:openBrandManager={handleOpenBrandManager}
+      on:openBulkMessage={handleOpenBulkMessage}
+      on:openContacts={handleOpenContacts}
+    />
 -->
 
 <script lang="ts">
+  import { createEventDispatcher } from 'svelte';
+
   // Import stores
-  import {
-    connectionStore,
-    ConnectionStatus,
-    isConnected,
-    isConnecting
-  } from '../stores/connectionStore';
+  import { connectionStore, ConnectionStatus } from '../stores/connectionStore';
+
+  // Import components
+  import BrandSelector from './BrandSelector.svelte';
+
+  // ==========================================================================
+  // Event Dispatcher
+  // ==========================================================================
+
+  const dispatch = createEventDispatcher<{
+    openBrandManager: void;
+    openBulkMessage: void;
+    openContacts: void;
+  }>();
 
   // ==========================================================================
   // Reactive State
@@ -36,21 +54,11 @@
   $: reconnectAttempts = $connectionStore.reconnectAttempts;
 
   // ==========================================================================
-  // Configuration
-  // ==========================================================================
-
-  /** Brand name displayed in the header */
-  const brandName = 'SMS Messaging';
-
-  // ==========================================================================
   // Helper Functions
   // ==========================================================================
 
   /**
    * Get the status indicator color class based on connection status.
-   *
-   * @param status - Current connection status
-   * @returns Tailwind CSS classes for the status indicator
    */
   function getStatusColorClass(status: ConnectionStatus): string {
     switch (status) {
@@ -67,20 +75,7 @@
   }
 
   /**
-   * Get the ping animation class (only for connected state).
-   *
-   * @param status - Current connection status
-   * @returns Animation class or empty string
-   */
-  function getPingClass(status: ConnectionStatus): string {
-    return status === ConnectionStatus.CONNECTED ? 'animate-ping' : '';
-  }
-
-  /**
    * Get human-readable status text.
-   *
-   * @param status - Current connection status
-   * @returns Status text to display
    */
   function getStatusText(status: ConnectionStatus): string {
     switch (status) {
@@ -100,9 +95,6 @@
 
   /**
    * Get text color class based on status.
-   *
-   * @param status - Current connection status
-   * @returns Tailwind text color class
    */
   function getTextColorClass(status: ConnectionStatus): string {
     switch (status) {
@@ -117,20 +109,26 @@
         return 'text-gray-500';
     }
   }
+
+  /**
+   * Handle brand manager request from selector.
+   */
+  function handleManageBrands(): void {
+    dispatch('openBrandManager');
+  }
 </script>
 
 <!-- Header Container -->
 <div
   class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm z-10"
 >
-  <!-- Left Side: Brand Identity -->
-  <div class="flex items-center space-x-3">
-    <!-- Brand Icon -->
+  <!-- Left Side: Brand Selector -->
+  <div class="flex items-center space-x-4">
+    <!-- Logo -->
     <div
       class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg
-            flex items-center justify-center text-white font-bold shadow-sm"
+                    flex items-center justify-center text-white font-bold shadow-sm"
     >
-      <!-- Message icon -->
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
           stroke-linecap="round"
@@ -141,8 +139,53 @@
       </svg>
     </div>
 
-    <!-- Brand Name -->
-    <h1 class="text-lg font-bold text-gray-800">{brandName}</h1>
+    <!-- Divider -->
+    <div class="h-8 w-px bg-gray-200"></div>
+
+    <!-- Brand Selector -->
+    <BrandSelector on:manageBrands={handleManageBrands} />
+  </div>
+
+  <!-- Center: Action Buttons -->
+  <div class="flex items-center space-x-2">
+    <!-- Bulk Send Button -->
+    <button
+      type="button"
+      class="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white
+                   bg-gradient-to-r from-orange-500 to-pink-600 rounded-lg
+                   hover:from-orange-600 hover:to-pink-700 transition-all
+                   shadow-sm hover:shadow-md"
+      on:click={() => dispatch('openBulkMessage')}
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+        />
+      </svg>
+      <span>Bulk Send</span>
+    </button>
+
+    <!-- Contacts Button -->
+    <button
+      type="button"
+      class="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700
+                   bg-white border border-gray-300 rounded-lg
+                   hover:bg-gray-50 transition-colors"
+      on:click={() => dispatch('openContacts')}
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+        />
+      </svg>
+      <span>Contacts</span>
+    </button>
   </div>
 
   <!-- Right Side: Connection Status -->
