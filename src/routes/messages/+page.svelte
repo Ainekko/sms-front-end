@@ -21,6 +21,7 @@
 
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { goto } from '$app/navigation';
 
   // Import components
   import ConversationList from '$lib/components/ConversationList.svelte';
@@ -36,8 +37,21 @@
   import { loadConversations, selectConversation } from '$lib/stores/conversationsStore';
   import { loadBrands, type Brand } from '$lib/stores/brandsStore';
   import { connectionStore } from '$lib/stores/connectionStore';
+  import { authStore, isAuthenticated, isAuthInitialized, isAdmin, currentUser } from '$lib/stores';
 
   // ==========================================================================
+  // Auth Guard
+  // ==========================================================================
+
+  // Redirect to login if not authenticated
+  $: if ($isAuthInitialized && !$isAuthenticated) {
+    goto('/login');
+  }
+
+  // ==========================================================================
+  // Modal/Panel State
+  // ==========================================================================
+
   // Modal/Panel State
   // ==========================================================================
 
@@ -89,6 +103,21 @@
   function handleMessageSent(event: CustomEvent<{ phoneNumber: string }>): void {
     selectConversation(event.detail.phoneNumber);
     showNewConversation = false;
+  }
+
+  /**
+   * Handle logout from user menu.
+   */
+  function handleLogout(): void {
+    authStore.logout();
+    goto('/login');
+  }
+
+  /**
+   * Navigate to admin dashboard.
+   */
+  function handleNavigateAdmin(): void {
+    goto('/admin');
   }
 
   // ==========================================================================
@@ -152,6 +181,8 @@
     on:openBrandManager={handleOpenBrandManager}
     on:openBulkMessage={() => (showBulkMessage = true)}
     on:openContacts={() => (showContacts = true)}
+    on:logout={handleLogout}
+    on:navigateAdmin={handleNavigateAdmin}
   />
 
   <!-- Main Content Area -->

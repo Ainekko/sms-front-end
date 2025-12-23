@@ -134,9 +134,15 @@ class MessagesApiClient {
     ): Promise<T> {
         const url = `${this.baseUrl}${endpoint}`;
 
-        // Set default headers
+        // Get auth token from localStorage
+        const token = typeof window !== 'undefined'
+            ? localStorage.getItem('sms_auth_token')
+            : null;
+
+        // Set default headers with auth
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             ...options.headers
         };
 

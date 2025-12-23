@@ -108,9 +108,15 @@ class ApiClient {
         const { params, ...fetchOptions } = options;
         const url = this.buildUrl(endpoint, params);
 
-        // Set default headers for JSON
+        // Get auth token from localStorage
+        const token = typeof window !== 'undefined'
+            ? localStorage.getItem('sms_auth_token')
+            : null;
+
+        // Set default headers for JSON, including auth if available
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             ...fetchOptions.headers,
         };
 

@@ -124,3 +124,22 @@ export {
     type ContactsState
 } from './contactsStore';
 
+// =============================================================================
+// Auth Store
+// =============================================================================
+// Manages user authentication state
+
+export {
+    authStore,
+    isAuthenticated,
+    isAdmin,
+    currentUser,
+    isAuthLoading,
+    isAuthInitialized,
+    authError,
+    checkAuth,
+    checkAdmin,
+    type AuthState
+} from './authStore';
+
+export type { User, UserRole } from '../types/auth.types';
