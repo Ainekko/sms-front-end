@@ -44,42 +44,42 @@
     }
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="login-form">
-    <div class="form-header">
-        <h1 class="form-title">Welcome Back</h1>
-        <p class="form-subtitle">Sign in to your account</p>
+<form on:submit|preventDefault={handleSubmit} class="w-full max-w-md p-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">Welcome Back</h1>
+        <p class="text-slate-400 text-sm">Sign in to your account</p>
     </div>
 
     {#if formError}
-        <div class="error-message">
-            <svg class="error-icon" viewBox="0 0 20 20" fill="currentColor">
+        <div class="flex items-center gap-3 p-4 mb-6 bg-red-500/10 border border-red-500/20 rounded-lg text-red-200 text-sm">
+            <svg class="w-5 h-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
             </svg>
             <span>{formError}</span>
         </div>
     {/if}
 
-    <div class="form-field">
-        <label for="email" class="field-label">Email</label>
+    <div class="mb-5">
+        <label for="email" class="block text-slate-300 text-sm font-medium mb-2">Email</label>
         <input
             type="email"
             id="email"
             bind:value={email}
             placeholder="you@example.com"
-            class="field-input"
+            class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={$isAuthLoading}
             autocomplete="email"
         />
     </div>
 
-    <div class="form-field">
-        <label for="password" class="field-label">Password</label>
+    <div class="mb-6">
+        <label for="password" class="block text-slate-300 text-sm font-medium mb-2">Password</label>
         <input
             type="password"
             id="password"
             bind:value={password}
             placeholder="••••••••"
-            class="field-input"
+            class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={$isAuthLoading}
             autocomplete="current-password"
         />
@@ -87,149 +87,17 @@
 
     <button
         type="submit"
-        class="submit-button"
+        class="w-full py-3.5 px-6 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold rounded-lg shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
         disabled={$isAuthLoading}
     >
         {#if $isAuthLoading}
-            <svg class="spinner" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25" />
-                <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" opacity="0.75" />
+            <svg class="animate-spin w-5 h-5" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" class="opacity-25" />
+                <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75" />
             </svg>
-            Signing in...
+            <span>Signing in...</span>
         {:else}
-            Sign In
+            <span>Sign In</span>
         {/if}
     </button>
 </form>
-
-<style>
-    .login-form {
-        width: 100%;
-        max-width: 400px;
-        padding: 2rem;
-        background: linear-gradient(145deg, rgba(30, 30, 40, 0.9), rgba(20, 20, 30, 0.95));
-        border-radius: 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(10px);
-    }
-
-    .form-header {
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-
-    .form-title {
-        font-size: 1.75rem;
-        font-weight: 700;
-        color: #f1f5f9;
-        margin: 0 0 0.5rem 0;
-    }
-
-    .form-subtitle {
-        color: #94a3b8;
-        margin: 0;
-        font-size: 0.875rem;
-    }
-
-    .error-message {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1rem;
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        border-radius: 0.5rem;
-        color: #fca5a5;
-        font-size: 0.875rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .error-icon {
-        width: 1.25rem;
-        height: 1.25rem;
-        flex-shrink: 0;
-    }
-
-    .form-field {
-        margin-bottom: 1.25rem;
-    }
-
-    .field-label {
-        display: block;
-        color: #cbd5e1;
-        font-size: 0.875rem;
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-    }
-
-    .field-input {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        background: rgba(15, 15, 20, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 0.5rem;
-        color: #f1f5f9;
-        font-size: 1rem;
-        transition: all 0.2s ease;
-        box-sizing: border-box;
-    }
-
-    .field-input::placeholder {
-        color: #64748b;
-    }
-
-    .field-input:focus {
-        outline: none;
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-    }
-
-    .field-input:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-
-    .submit-button {
-        width: 100%;
-        padding: 0.875rem 1.5rem;
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        color: white;
-        font-weight: 600;
-        font-size: 1rem;
-        border: none;
-        border-radius: 0.5rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        transition: all 0.2s ease;
-        margin-top: 1.5rem;
-    }
-
-    .submit-button:hover:not(:disabled) {
-        transform: translateY(-1px);
-        box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
-    }
-
-    .submit-button:active:not(:disabled) {
-        transform: translateY(0);
-    }
-
-    .submit-button:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-    }
-
-    .spinner {
-        width: 1.25rem;
-        height: 1.25rem;
-        animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-</style>

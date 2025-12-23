@@ -26,11 +26,32 @@
   <title>Login | SMS Manager</title>
 </svelte:head>
 
-<div class="login-page">
-  <div class="login-container">
-    <div class="brand">
-      <div class="brand-logo">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<div
+  class="min-h-screen w-full flex items-center justify-center bg-[#0f0f14] relative overflow-hidden"
+>
+  <!-- Background Decorations -->
+  <div
+    class="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none"
+  ></div>
+  <div
+    class="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-violet-600/20 rounded-full blur-[100px] pointer-events-none"
+  ></div>
+  <div
+    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-cyan-500/10 rounded-full blur-[80px] pointer-events-none"
+  ></div>
+
+  <div class="relative z-10 w-full max-w-md flex flex-col items-center gap-8 px-4">
+    <div class="flex items-center gap-3">
+      <div
+        class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20"
+      >
+        <svg
+          class="w-7 h-7 text-white"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -38,105 +59,9 @@
           />
         </svg>
       </div>
-      <span class="brand-name">SMS Manager</span>
+      <span class="text-2xl font-bold text-white tracking-tight">SMS Manager</span>
     </div>
 
     <LoginForm on:success={handleSuccess} />
   </div>
-
-  <div class="page-decoration">
-    <div class="decoration-circle decoration-1"></div>
-    <div class="decoration-circle decoration-2"></div>
-    <div class="decoration-circle decoration-3"></div>
-  </div>
 </div>
-
-<style>
-  .login-page {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #0f0f14 0%, #1a1a2e 50%, #16213e 100%);
-    padding: 2rem;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .login-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2rem;
-    z-index: 10;
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .brand-logo {
-    width: 2.5rem;
-    height: 2.5rem;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    border-radius: 0.625rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-  }
-
-  .brand-logo svg {
-    width: 100%;
-    height: 100%;
-    color: white;
-  }
-
-  .brand-name {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #f1f5f9;
-    letter-spacing: -0.025em;
-  }
-
-  /* Background decoration */
-  .page-decoration {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-  }
-
-  .decoration-circle {
-    position: absolute;
-    border-radius: 50%;
-    opacity: 0.1;
-  }
-
-  .decoration-1 {
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, #6366f1 0%, transparent 70%);
-    top: -200px;
-    right: -200px;
-  }
-
-  .decoration-2 {
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, #8b5cf6 0%, transparent 70%);
-    bottom: -100px;
-    left: -100px;
-  }
-
-  .decoration-3 {
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, #06b6d4 0%, transparent 70%);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
-</style>
