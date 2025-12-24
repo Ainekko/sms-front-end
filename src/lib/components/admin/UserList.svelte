@@ -5,7 +5,8 @@
    * Displays all users for admin management.
    */
   import { onMount } from 'svelte';
-  import { authApi } from '$lib/api/auth';
+  import { usersApi } from '$lib/api/users';
+  import ChangePasswordModal from './ChangePasswordModal.svelte';
   import type { User } from '$lib/types/auth.types';
   import UserCard from './UserCard.svelte';
 
@@ -13,23 +14,86 @@
   export let isLoading = false;
   export let error = '';
 
+  let showPasswordModal = false;
+  let selectedUserForReset: User | null = null;
+
+  /**
+   * Handle user promotion.
+   */
   /**
    * Handle user promotion.
    */
   async function handlePromote(event: CustomEvent<{ userId: string }>) {
     const { userId } = event.detail;
-    const user = users.find((u) => u.id === userId);
-    if (!user) return;
-
     try {
-      const updated = await authApi.promoteUser(userId);
-      // Update local list
+      const updated = await usersApi.promoteUser(userId);
       users = users.map((u) =>
         u.id === userId ? { ...u, role: updated.role as User['role'] } : u
       );
     } catch (err) {
       error = err instanceof Error ? err.message : 'Failed to promote user';
     }
+  }
+
+  /**
+   * Handle user depromotion.
+   */
+  async function handleDepromote(event: CustomEvent<{ userId: string }>) {
+    const { userId } = event.detail;
+    try {
+      const updated = await usersApi.depromoteUser(userId);
+      users = users.map((u) =>
+        u.id === userId ? { ...u, role: updated.role as User['role'] } : u
+      );
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Failed to depromote user';
+    }
+  }
+
+  /**
+   * Handle user deletion.
+   */
+  async function handleDelete(event: CustomEvent<{ userId: string }>) {
+    const { userId } = event.detail;
+    try {
+      await usersApi.deleteUser(userId);
+      users = users.filter((u) => u.id !== userId);
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Failed to delete user';
+    }
+  }
+
+  /**
+   * Handle password reset.
+   */
+
+  function handleResetPassword(event: CustomEvent<{ userId: string }>) {
+    const { userId } = event.detail;
+    const user = users.find((u) => u.id === userId);
+    if (user) {
+      selectedUserForReset = user;
+      showPasswordModal = true;
+    }
+  }
+
+  async function saveNewPassword(event: CustomEvent<{ password: string }>) {
+    if (!selectedUserForReset) return;
+
+    const { password } = event.detail;
+    try {
+      await usersApi.resetPassword(selectedUserForReset.id, password);
+      showPasswordModal = false;
+      selectedUserForReset = null;
+      alert('Password reset successfully');
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Failed to reset password';
+      showPasswordModal = false;
+    }
+  }
+
+  function closePasswordModal() {
+    showPasswordModal = false;
+    selectedUserForReset = null;
   }
 </script>
 
@@ -73,9 +137,23 @@
     </div>
     <div class="list-content">
       {#each users as user (user.id)}
-        <UserCard {user} on:promote={handlePromote} />
+        <UserCard
+          {user}
+          on:promote={handlePromote}
+          on:depromote={handleDepromote}
+          on:delete={handleDelete}
+          on:resetPassword={handleResetPassword}
+        />
       {/each}
     </div>
+  {/if}
+
+  {#if showPasswordModal && selectedUserForReset}
+    <ChangePasswordModal
+      email={selectedUserForReset.email}
+      on:close={closePasswordModal}
+      on:save={saveNewPassword}
+    />
   {/if}
 </div>
 

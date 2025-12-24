@@ -16,6 +16,7 @@
     showError
   } from '$lib/stores';
   import { authApi } from '$lib/api/auth';
+  import { usersApi } from '$lib/api/users';
   import type { User } from '$lib/types/auth.types';
   import CreateUserForm from '$lib/components/admin/CreateUserForm.svelte';
   import UserList from '$lib/components/admin/UserList.svelte';
@@ -47,7 +48,7 @@
     usersError = '';
 
     try {
-      users = await authApi.getUsers();
+      users = await usersApi.getUsers();
     } catch (err) {
       usersError = err instanceof Error ? err.message : 'Failed to load users';
     } finally {

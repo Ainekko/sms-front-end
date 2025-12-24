@@ -87,19 +87,7 @@ export async function createUser(request: CreateUserRequest): Promise<User> {
     return api.post<User>('/auth/register', request);
 }
 
-/**
- * Promote a user to admin (admin only).
- */
-export async function promoteUser(userId: string): Promise<User> {
-    return api.put<User>(`/auth/promote/${userId}`, {});
-}
 
-/**
- * Get all users (admin only).
- */
-export async function getUsers(): Promise<User[]> {
-    return api.get<User[]>('/auth/users');
-}
 
 /**
  * Auth API object for convenient access.
@@ -108,8 +96,7 @@ export const authApi = {
     login,
     getMe,
     createUser,
-    promoteUser,
-    getUsers,
+
     getStoredToken,
     setStoredToken,
     clearStoredToken,
