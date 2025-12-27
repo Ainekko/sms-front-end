@@ -120,6 +120,13 @@
     goto('/admin');
   }
 
+  /**
+   * Navigate to groups page.
+   */
+  function handleNavigateGroups(): void {
+    goto('/groups');
+  }
+
   // ==========================================================================
   // Lifecycle
   // ==========================================================================
@@ -183,6 +190,7 @@
     on:openContacts={() => (showContacts = true)}
     on:logout={handleLogout}
     on:navigateAdmin={handleNavigateAdmin}
+    on:navigateGroups={handleNavigateGroups}
   />
 
   <!-- Main Content Area -->

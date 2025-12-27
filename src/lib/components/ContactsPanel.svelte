@@ -33,7 +33,9 @@
     type BrandContact
   } from '../stores/brandsStore';
   import { createContact, removeContactFromBrand } from '../stores/contactsStore';
+
   import { showSuccess, showError } from '../stores/uiStore';
+  import AddToGroupModal from './groups/AddToGroupModal.svelte';
 
   // ==========================================================================
   // Props
@@ -59,6 +61,15 @@
   let newName = '';
   let isAddingContact = false;
   let showAddForm = false;
+
+  /** Add to group modal */
+  let showAddToGroup = false;
+  let selectedContactIdsForGroup: string[] = [];
+
+  /** Selection State */
+  let selectedContactIds: Set<string> = new Set();
+  $: isAllSelected = contacts.length > 0 && selectedContactIds.size === contacts.length;
+  $: hasSelection = selectedContactIds.size > 0;
 
   // ==========================================================================
   // Reactive State
@@ -148,6 +159,45 @@
   }
 
   /**
+   * Handle add to group click.
+   */
+  function handleAddToGroup(contact: BrandContact): void {
+    selectedContactIdsForGroup = [contact.id];
+    showAddToGroup = true;
+  }
+
+  /**
+   * Handle bulk add to group.
+   */
+  function handleBulkAddToGroup(): void {
+    selectedContactIdsForGroup = Array.from(selectedContactIds);
+    showAddToGroup = true;
+  }
+
+  /**
+   * Toggle contact selection.
+   */
+  function toggleContactSelection(contactId: string): void {
+    if (selectedContactIds.has(contactId)) {
+      selectedContactIds.delete(contactId);
+    } else {
+      selectedContactIds.add(contactId);
+    }
+    selectedContactIds = selectedContactIds; // Trigger reactivity
+  }
+
+  /**
+   * Toggle select all.
+   */
+  function toggleSelectAll(): void {
+    if (isAllSelected) {
+      selectedContactIds = new Set();
+    } else {
+      selectedContactIds = new Set(contacts.map((c) => c.id));
+    }
+  }
+
+  /**
    * Handle panel close.
    */
   function handleClose(): void {
@@ -181,36 +231,74 @@
 
 <!-- Panel Backdrop -->
 {#if isOpen}
-  <div class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" on:click={handleBackdropClick}>
+  <div
+    class="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+    on:click={handleBackdropClick}
+    on:keydown={handleKeydown}
+    role="button"
+    tabindex="-1"
+  >
     <!-- Slide-out Panel -->
     <div
       class="absolute right-0 top-0 h-full w-96 max-w-full bg-white shadow-2xl
                    flex flex-col animate-slide-in"
       on:click|stopPropagation
+      on:keydown|stopPropagation
+      role="dialog"
+      aria-modal="true"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+      <div
+        class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white z-10"
+      >
         <div>
           <h2 class="text-lg font-bold text-gray-800">Contacts</h2>
           {#if currentBrand}
             <p class="text-sm text-gray-500">{currentBrand.name}</p>
           {/if}
         </div>
-        <button
-          type="button"
-          class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          on:click={handleClose}
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+        <div class="flex items-center space-x-2">
+          {#if hasSelection}
+            <button
+              class="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              on:click={handleBulkAddToGroup}
+            >
+              Add {selectedContactIds.size} to Group
+            </button>
+          {/if}
+          <button
+            type="button"
+            class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            on:click={handleClose}
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
+
+      <!-- Selection Header -->
+      {#if contacts.length > 0}
+        <div class="px-6 py-2 border-b border-gray-100 bg-gray-50/50 flex items-center">
+          <label
+            class="flex items-center space-x-3 cursor-pointer text-sm text-gray-600 select-none"
+          >
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              on:change={toggleSelectAll}
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span>Select All</span>
+          </label>
+        </div>
+      {/if}
 
       <!-- Add Contact Section -->
       <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
@@ -220,7 +308,7 @@
               type="tel"
               bind:value={newPhoneNumber}
               placeholder="+1234567890"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900
                                    focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isAddingContact}
             />
@@ -228,7 +316,7 @@
               type="text"
               bind:value={newName}
               placeholder="Name (optional)"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900
                                    focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isAddingContact}
             />
@@ -323,9 +411,17 @@
           <!-- Contact Items -->
           {#each contacts as contact (contact.id)}
             <div
-              class="flex items-center justify-between px-6 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors"
+              class="flex items-center justify-between px-6 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors group"
             >
               <div class="flex items-center space-x-3">
+                <!-- Checkbox -->
+                <input
+                  type="checkbox"
+                  checked={selectedContactIds.has(contact.id)}
+                  on:change={() => toggleContactSelection(contact.id)}
+                  class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+
                 <!-- Avatar -->
                 <div
                   class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-blue-500
@@ -347,22 +443,41 @@
                 </div>
               </div>
 
-              <!-- Remove Button -->
-              <button
-                type="button"
-                class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                title="Remove from brand"
-                on:click={() => handleRemoveContact(contact)}
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+              <div class="flex space-x-1">
+                <!-- Add to Group Button -->
+                <button
+                  type="button"
+                  class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="Add to Group"
+                  on:click={() => handleAddToGroup(contact)}
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                </button>
+
+                <!-- Remove Button -->
+                <button
+                  type="button"
+                  class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Remove from brand"
+                  on:click={() => handleRemoveContact(contact)}
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
           {/each}
         {/if}
@@ -377,6 +492,12 @@
     </div>
   </div>
 {/if}
+
+<AddToGroupModal
+  isOpen={showAddToGroup}
+  contactIds={selectedContactIdsForGroup}
+  on:close={() => (showAddToGroup = false)}
+/>
 
 <style>
   /* Slide-in animation */

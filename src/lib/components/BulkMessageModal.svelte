@@ -28,7 +28,13 @@
 
   // Import stores and API
   import { brandsStore, type Brand } from '../stores/brandsStore';
-  import { bulkApi, type BulkPreviewResponse, type BulkSendResponse } from '../api/bulk';
+  import {
+    bulkApi,
+    type BulkPreviewResponse,
+    type BulkSendResponse,
+    type GroupSendRequest
+  } from '../api/bulk';
+  import { groupsApi, type ContactGroup } from '../api/groups';
   import { showSuccess, showError } from '../stores/uiStore';
 
   // ==========================================================================
@@ -52,6 +58,15 @@
 
   /** Selected brand IDs */
   let selectedBrandIds: Set<string> = new Set();
+
+  /** Send mode: 'brands' or 'groups' */
+  let sendMode: 'brands' | 'groups' = 'brands';
+
+  /** Groups list and selection */
+  let groups: ContactGroup[] = [];
+  let selectedGroupId = '';
+  let selectedFromBrandId = '';
+  let isLoadingGroups = false;
 
   /** Message content */
   let message = '';
@@ -84,13 +99,17 @@
 
   $: brands = $brandsStore.brands;
   $: selectedBrands = brands.filter((b) => selectedBrandIds.has(b.id));
-  $: canPreview = selectedBrandIds.size > 0 && message.trim().length > 0;
+  $: canPreview =
+    sendMode === 'brands'
+      ? selectedBrandIds.size > 0 && message.trim().length > 0
+      : selectedGroupId && selectedFromBrandId && message.trim().length > 0;
   $: messageLength = message.length;
   $: isOverLimit = messageLength > MAX_MESSAGE_LENGTH;
 
   // Reset state when modal opens
   $: if (isOpen) {
     resetState();
+    loadGroups();
   }
 
   // ==========================================================================
@@ -102,11 +121,28 @@
    */
   function resetState(): void {
     selectedBrandIds = new Set();
+    selectedGroupId = '';
+    selectedFromBrandId = brands.length > 0 ? brands[0].id : '';
+    sendMode = 'brands';
     message = '';
     step = 'compose';
     previewData = null;
     sendResults = null;
     error = '';
+  }
+
+  /**
+   * Load groups from API.
+   */
+  async function loadGroups(): Promise<void> {
+    isLoadingGroups = true;
+    try {
+      groups = await groupsApi.listGroups();
+    } catch (err) {
+      console.error('Failed to load groups:', err);
+    } finally {
+      isLoadingGroups = false;
+    }
   }
 
   /**
@@ -146,7 +182,15 @@
     isLoadingPreview = true;
 
     try {
-      previewData = await bulkApi.previewBulkSend(Array.from(selectedBrandIds), message.trim());
+      if (sendMode === 'brands') {
+        previewData = await bulkApi.previewBulkSend(Array.from(selectedBrandIds), message.trim());
+      } else {
+        previewData = await bulkApi.previewGroupSend({
+          group_id: selectedGroupId,
+          from_brand_id: selectedFromBrandId,
+          message: message.trim()
+        });
+      }
       step = 'preview';
     } catch (err) {
       console.error('Failed to preview:', err);
@@ -167,7 +211,15 @@
     isSending = true;
 
     try {
-      sendResults = await bulkApi.sendBulkMessage(Array.from(selectedBrandIds), message.trim());
+      if (sendMode === 'brands') {
+        sendResults = await bulkApi.sendBulkMessage(Array.from(selectedBrandIds), message.trim());
+      } else {
+        sendResults = await bulkApi.sendToGroup({
+          group_id: selectedGroupId,
+          from_brand_id: selectedFromBrandId,
+          message: message.trim()
+        });
+      }
       step = 'results';
 
       if (sendResults.success) {
@@ -312,68 +364,176 @@
         <!-- Step: Compose -->
         {#if step === 'compose'}
           <div class="space-y-6">
-            <!-- Brand Selection -->
+            <!-- Mode Toggle -->
             <div>
-              <div class="flex items-center justify-between mb-3">
-                <label class="block text-sm font-medium text-gray-700">
-                  Select Brands <span class="text-red-500">*</span>
-                </label>
-                <div class="flex space-x-2 text-xs">
-                  <button
-                    type="button"
-                    class="text-blue-600 hover:underline"
-                    on:click={selectAllBrands}
+              <label class="block text-sm font-medium text-gray-700 mb-2">Send To</label>
+              <div class="flex rounded-lg border border-gray-200 overflow-hidden">
+                <button
+                  type="button"
+                  class="flex-1 px-4 py-2.5 text-sm font-medium transition-colors
+                         {sendMode === 'brands'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'}"
+                  on:click={() => (sendMode = 'brands')}
+                >
+                  <span class="flex items-center justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
+                    </svg>
+                    <span>By Brands</span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 px-4 py-2.5 text-sm font-medium transition-colors
+                         {sendMode === 'groups'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'}"
+                  on:click={() => (sendMode = 'groups')}
+                >
+                  <span class="flex items-center justify-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                      />
+                    </svg>
+                    <span>By Group</span>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Brand Selection (when mode is 'brands') -->
+            {#if sendMode === 'brands'}
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <label class="block text-sm font-medium text-gray-700">
+                    Select Brands <span class="text-red-500">*</span>
+                  </label>
+                  <div class="flex space-x-2 text-xs">
+                    <button
+                      type="button"
+                      class="text-blue-600 hover:underline"
+                      on:click={selectAllBrands}
+                    >
+                      Select All
+                    </button>
+                    <span class="text-gray-300">|</span>
+                    <button
+                      type="button"
+                      class="text-gray-500 hover:underline"
+                      on:click={clearSelection}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1">
+                  {#each brands as brand (brand.id)}
+                    <button
+                      type="button"
+                      class="flex items-center space-x-2 px-3 py-2 rounded-lg border text-left transition-colors
+                             {selectedBrandIds.has(brand.id)
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'}"
+                      on:click={() => toggleBrand(brand.id)}
+                    >
+                      <div
+                        class="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
+                               {selectedBrandIds.has(brand.id)
+                          ? 'border-blue-500 bg-blue-500'
+                          : 'border-gray-300'}"
+                      >
+                        {#if selectedBrandIds.has(brand.id)}
+                          <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                              fill-rule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>
+                        {/if}
+                      </div>
+                      <span class="text-sm font-medium truncate">{brand.name}</span>
+                    </button>
+                  {/each}
+                </div>
+
+                {#if selectedBrandIds.size > 0}
+                  <p class="mt-2 text-xs text-gray-500">
+                    {selectedBrandIds.size} brand{selectedBrandIds.size !== 1 ? 's' : ''} selected
+                  </p>
+                {/if}
+              </div>
+
+              <!-- Group Selection (when mode is 'groups') -->
+            {:else}
+              <div class="space-y-4">
+                <!-- Select Group -->
+                <div>
+                  <label for="select-group" class="block text-sm font-medium text-gray-700 mb-1.5">
+                    Select Group <span class="text-red-500">*</span>
+                  </label>
+                  {#if isLoadingGroups}
+                    <div class="flex items-center space-x-2 py-2">
+                      <div
+                        class="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"
+                      ></div>
+                      <span class="text-sm text-gray-500">Loading groups...</span>
+                    </div>
+                  {:else if groups.length === 0}
+                    <p class="text-sm text-gray-500 py-2">
+                      No groups available. Create a group first.
+                    </p>
+                  {:else}
+                    <select
+                      id="select-group"
+                      bind:value={selectedGroupId}
+                      class="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900
+                             focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                             transition-colors bg-white"
+                    >
+                      <option value="">-- Select a group --</option>
+                      {#each groups as group}
+                        <option value={group.id}
+                          >{group.name} ({group.contact_count} contacts)</option
+                        >
+                      {/each}
+                    </select>
+                  {/if}
+                </div>
+
+                <!-- Select From Brand -->
+                <div>
+                  <label for="from-brand" class="block text-sm font-medium text-gray-700 mb-1.5">
+                    Send From <span class="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="from-brand"
+                    bind:value={selectedFromBrandId}
+                    class="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900
+                           focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                           transition-colors bg-white"
                   >
-                    Select All
-                  </button>
-                  <span class="text-gray-300">|</span>
-                  <button
-                    type="button"
-                    class="text-gray-500 hover:underline"
-                    on:click={clearSelection}
-                  >
-                    Clear
-                  </button>
+                    {#each brands.filter((b) => b.isActive) as brand}
+                      <option value={brand.id}>{brand.name} ({brand.phoneNumber})</option>
+                    {/each}
+                  </select>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Messages will be sent from this brand's phone number.
+                  </p>
                 </div>
               </div>
-
-              <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-1">
-                {#each brands as brand (brand.id)}
-                  <button
-                    type="button"
-                    class="flex items-center space-x-2 px-3 py-2 rounded-lg border text-left transition-colors
-                                               {selectedBrandIds.has(brand.id)
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 hover:border-gray-300'}"
-                    on:click={() => toggleBrand(brand.id)}
-                  >
-                    <div
-                      class="w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
-                                                    {selectedBrandIds.has(brand.id)
-                        ? 'border-blue-500 bg-blue-500'
-                        : 'border-gray-300'}"
-                    >
-                      {#if selectedBrandIds.has(brand.id)}
-                        <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path
-                            fill-rule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clip-rule="evenodd"
-                          />
-                        </svg>
-                      {/if}
-                    </div>
-                    <span class="text-sm font-medium truncate">{brand.name}</span>
-                  </button>
-                {/each}
-              </div>
-
-              {#if selectedBrandIds.size > 0}
-                <p class="mt-2 text-xs text-gray-500">
-                  {selectedBrandIds.size} brand{selectedBrandIds.size !== 1 ? 's' : ''} selected
-                </p>
-              {/if}
-            </div>
+            {/if}
 
             <!-- Message Composition -->
             <div>

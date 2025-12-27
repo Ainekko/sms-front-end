@@ -19,6 +19,12 @@ export interface BulkSendRequest {
     message: string;
 }
 
+export interface GroupSendRequest {
+    group_id: string;
+    from_brand_id: string;
+    message: string;
+}
+
 export interface BulkPreviewBrand {
     brand_id: string;
     brand_name: string;
@@ -72,9 +78,25 @@ export async function sendBulkMessage(brandIds: string[], message: string): Prom
 }
 
 /**
+ * Preview recipients for sending to a contact group.
+ */
+export async function previewGroupSend(data: GroupSendRequest): Promise<BulkPreviewResponse> {
+    return api.post<BulkPreviewResponse>('/bulk/preview-group', data);
+}
+
+/**
+ * Send message to all contacts in a group.
+ */
+export async function sendToGroup(data: GroupSendRequest): Promise<BulkSendResponse> {
+    return api.post<BulkSendResponse>('/bulk/send-to-group', data);
+}
+
+/**
  * Bulk API object for convenient access.
  */
 export const bulkApi = {
     previewBulkSend,
     sendBulkMessage,
+    previewGroupSend,
+    sendToGroup,
 };

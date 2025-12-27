@@ -45,6 +45,7 @@
     openContacts: void;
     logout: void;
     navigateAdmin: void;
+    navigateGroups: void;
   }>();
 
   // ==========================================================================
@@ -191,6 +192,25 @@
         />
       </svg>
       <span>Contacts</span>
+    </button>
+
+    <!-- Groups Button -->
+    <button
+      type="button"
+      class="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700
+                   bg-white border border-gray-300 rounded-lg
+                   hover:bg-gray-50 transition-colors"
+      on:click={() => dispatch('navigateGroups')}
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+        />
+      </svg>
+      <span>Groups</span>
     </button>
   </div>
 
