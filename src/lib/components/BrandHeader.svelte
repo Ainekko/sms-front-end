@@ -36,6 +36,13 @@
   import BrandSelector from './BrandSelector.svelte';
 
   // ==========================================================================
+  // Props
+  // ==========================================================================
+
+  /** Selected brand ID from URL */
+  export let selectedBrandId: string | null = null;
+
+  // ==========================================================================
   // Event Dispatcher
   // ==========================================================================
 
@@ -150,7 +157,7 @@
     <div class="h-8 w-px bg-gray-200"></div>
 
     <!-- Brand Selector -->
-    <BrandSelector on:manageBrands={handleManageBrands} />
+    <BrandSelector {selectedBrandId} on:manageBrands={handleManageBrands} />
   </div>
 
   <!-- Center: Action Buttons -->

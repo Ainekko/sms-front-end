@@ -22,6 +22,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
 
   // Import components
   import ConversationList from '$lib/components/ConversationList.svelte';
@@ -47,6 +48,13 @@
   $: if ($isAuthInitialized && !$isAuthenticated) {
     goto('/login');
   }
+
+  // ==========================================================================
+  // URL-Based State
+  // ==========================================================================
+
+  /** Get brand ID from URL query param */
+  $: brandId = $page.url.searchParams.get('brand');
 
   // ==========================================================================
   // Modal/Panel State
@@ -156,13 +164,7 @@
       // The WebSocket service will handle reconnection attempts
     }
 
-    // Load initial conversations
-    try {
-      await loadConversations();
-      console.log('[MessagesPage] Conversations loaded');
-    } catch (error) {
-      console.error('[MessagesPage] Failed to load conversations:', error);
-    }
+    // Conversations are loaded reactively by ConversationList based on brandId from URL
   });
 
   /**
@@ -185,6 +187,7 @@
 <div class="flex flex-col h-screen bg-gray-100 overflow-hidden font-sans">
   <!-- Application Header -->
   <BrandHeader
+    selectedBrandId={brandId}
     on:openBrandManager={handleOpenBrandManager}
     on:openBulkMessage={() => (showBulkMessage = true)}
     on:openContacts={() => (showContacts = true)}
@@ -200,7 +203,7 @@
             Hidden on mobile (md:block), always visible on desktop
         -->
     <aside class="hidden md:block h-full">
-      <ConversationList on:newMessage={() => (showNewConversation = true)} />
+      <ConversationList {brandId} on:newMessage={() => (showNewConversation = true)} />
     </aside>
 
     <!-- 

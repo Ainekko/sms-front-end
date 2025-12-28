@@ -31,6 +31,13 @@
   } from '../stores/conversationsStore';
 
   // ==========================================================================
+  // Props
+  // ==========================================================================
+
+  /** Brand ID to filter conversations (from URL) */
+  export let brandId: string | null = null;
+
+  // ==========================================================================
   // Reactive State
   // ==========================================================================
 
@@ -41,6 +48,18 @@
   $: selectedId = $selectedConversationId;
 
   // ==========================================================================
+  // Reactive Loading - reload when brandId changes
+  // ==========================================================================
+
+  // Track the last loaded brandId to prevent duplicate loads
+  let lastLoadedBrandId: string | null | undefined;
+
+  $: if (brandId !== lastLoadedBrandId) {
+    lastLoadedBrandId = brandId;
+    loadConversations(brandId ?? undefined);
+  }
+
+  // ==========================================================================
   // Lifecycle
   // ==========================================================================
 
@@ -48,10 +67,7 @@
    * Load conversations when component mounts.
    */
   onMount(() => {
-    // Only load if we don't have conversations yet
-    if (conversations.length === 0) {
-      loadConversations();
-    }
+    // Initial load handled by reactive statement above
   });
 
   // ==========================================================================
@@ -118,11 +134,13 @@
   /**
    * Truncate a message preview if too long.
    *
-   * @param text - Message text
+   * @param text - Message text (can be null/undefined)
    * @param maxLength - Maximum characters to show
    * @returns Truncated text with ellipsis if needed
    */
-  function truncateMessage(text: string, maxLength: number = 50): string {
+  function truncateMessage(text: string | null | undefined, maxLength: number = 50): string {
+    // Handle null, undefined, or non-string values
+    if (!text || typeof text !== 'string') return '';
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength).trim() + '...';
   }
@@ -311,7 +329,7 @@
                   {#if conversation.lastMessageDirection === 'outbound'}
                     <span class="text-gray-400">You: </span>
                   {/if}
-                  {truncateMessage(conversation.lastMessage)}
+                  {truncateMessage(conversation.lastMessage || '')}
                 </p>
 
                 <!-- Unread Count Badge -->

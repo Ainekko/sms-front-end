@@ -281,14 +281,15 @@ export const totalUnreadCount = derived(
  * Load all conversations from the API.
  * Updates the store with the loaded data or error message.
  * 
+ * @param brandId - Optional brand ID to filter conversations
  * @returns Promise that resolves when loading is complete
  */
-export async function loadConversations(): Promise<void> {
+export async function loadConversations(brandId?: string): Promise<void> {
     conversationsStore.setLoading();
 
     try {
-        // Fetch conversations from the API
-        const data = await conversationsApi.getAllConversations();
+        // Fetch conversations from the API (optionally filtered by brand)
+        const data = await conversationsApi.getAllConversations(brandId);
 
         // Transform API response to our store format
         const conversations: ConversationSummary[] = data.map(item => ({
