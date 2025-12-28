@@ -18,17 +18,33 @@ import { api } from './base';
 // =============================================================================
 
 /**
+ * Message object from the API.
+ */
+export interface Message {
+    id: string;
+    twilio_sid: string;
+    from_number: string;
+    to_number: string;
+    body: string;
+    direction: 'inbound' | 'outbound';
+    status: 'queued' | 'sending' | 'sent' | 'delivered' | 'failed' | 'undelivered' | 'received';
+    brand_id: string | null;
+    contact_id: string | null;
+    created_at: string;
+}
+
+/**
  * Conversation summary from the API.
  */
 export interface ConversationResponse {
     /** Phone number this conversation is with (E.164 format) */
     phone_number: string;
-    /** Preview of the last message in the conversation (can be null) */
-    last_message: string | null;
-    /** Direction of the last message: 'inbound' or 'outbound' */
-    last_direction: string;
-    /** Timestamp of the last message (ISO format) */
-    last_message_at: string;
+    /** UUID of the contact. null if no contact exists */
+    contact_id: string | null;
+    /** Name of the contact. null if no contact or contact has no name */
+    contact_name: string | null;
+    /** The most recent message in this conversation */
+    last_message: Message;
     /** Total number of messages in this conversation */
     message_count: number;
 }
@@ -45,9 +61,11 @@ export interface ConversationResponse {
  */
 export async function getAllConversations(brandId?: string): Promise<ConversationResponse[]> {
     const endpoint = brandId
-        ? `/messages/conversations/brand/${brandId}`
+        ? `/messages/conversations?brand_id=${brandId}`
         : '/messages/conversations';
-    return api.get<ConversationResponse[]>(endpoint);
+    const res = await api.get<ConversationResponse[]>(endpoint);
+    console.log('[Conversations] Loaded:', res);
+    return res;
 }
 
 /**

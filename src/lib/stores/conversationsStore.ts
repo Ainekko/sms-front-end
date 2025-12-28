@@ -39,6 +39,12 @@ export interface ConversationSummary {
     /** The phone number this conversation is with (E.164 format) */
     phoneNumber: string;
 
+    /** UUID of the contact, null if not a saved contact */
+    contactId: string | null;
+
+    /** Name of the contact, null if no contact or contact has no name */
+    contactName: string | null;
+
     /** Preview of the last message in the conversation */
     lastMessage: string;
 
@@ -184,6 +190,8 @@ function createConversationsStore() {
                     // Add new conversation at the top
                     const newConversation: ConversationSummary = {
                         phoneNumber,
+                        contactId: null,
+                        contactName: null,
                         lastMessage,
                         lastMessageDirection: direction,
                         lastMessageAt: now,
@@ -294,9 +302,11 @@ export async function loadConversations(brandId?: string): Promise<void> {
         // Transform API response to our store format
         const conversations: ConversationSummary[] = data.map(item => ({
             phoneNumber: item.phone_number,
-            lastMessage: item.last_message || '',
-            lastMessageDirection: item.last_direction as 'inbound' | 'outbound',
-            lastMessageAt: new Date(item.last_message_at),
+            contactId: item.contact_id,
+            contactName: item.contact_name,
+            lastMessage: item.last_message?.body || '',
+            lastMessageDirection: item.last_message?.direction || 'outbound',
+            lastMessageAt: new Date(item.last_message?.created_at || Date.now()),
             messageCount: item.message_count || 0,
             unreadCount: 0 // TODO: Track unread on backend
         }));

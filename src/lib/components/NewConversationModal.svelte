@@ -5,6 +5,7 @@
   
   This component:
   - Phone number input with validation
+  - Contact search for existing contacts
   - Message composition
   - Shows which brand will be used
   - Sends message and opens conversation
@@ -25,11 +26,12 @@
 -->
 
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
 
-  // Import stores
+  // Import stores and APIs
   import { selectedBrand } from '../stores/brandsStore';
   import { messagesApi } from '../api/messages';
+  import { contactsApi, type ContactResponse } from '../api/contacts';
   import { showSuccess, showError } from '../stores/uiStore';
   import { loadConversations } from '../stores/conversationsStore';
 
@@ -39,6 +41,12 @@
 
   /** Whether the modal is open */
   export let isOpen = false;
+
+  /** Optional pre-filled phone number (e.g., from ContactsPanel) */
+  export let initialPhone = '';
+
+  /** Optional pre-filled contact name */
+  export let initialContactName: string | null = null;
 
   // ==========================================================================
   // Event Dispatcher
@@ -65,6 +73,12 @@
   /** Error message */
   let error = '';
 
+  /** Contact search */
+  let contacts: ContactResponse[] = [];
+  let isLoadingContacts = false;
+  let showContactDropdown = false;
+  let selectedContactName: string | null = null;
+
   // ==========================================================================
   // Reactive State
   // ==========================================================================
@@ -72,22 +86,80 @@
   $: currentBrand = $selectedBrand;
   $: canSend = phoneNumber.trim().length > 0 && message.trim().length > 0;
 
+  // Filter contacts based on phone input
+  $: filteredContacts =
+    phoneNumber.length >= 2
+      ? contacts
+          .filter(
+            (c) =>
+              c.phone_number.includes(phoneNumber.replace(/[^\d+]/g, '')) ||
+              c.name?.toLowerCase().includes(phoneNumber.toLowerCase())
+          )
+          .slice(0, 5)
+      : [];
+
+  // Show dropdown when there are filtered results
+  $: showContactDropdown = filteredContacts.length > 0 && !selectedContactName;
+
   // Reset when modal opens
   $: if (isOpen) {
     resetForm();
+    loadContacts();
   }
 
   // ==========================================================================
-  // Helper Functions
+  // Lifecycle
   // ==========================================================================
+
+  onMount(() => {
+    loadContacts();
+  });
+
+  // ==========================================================================
+  // Helper Functions
+
+  /**
+   * Load contacts for the current brand.
+   */
+  async function loadContacts(): Promise<void> {
+    if (isLoadingContacts || !currentBrand) return;
+    isLoadingContacts = true;
+
+    try {
+      contacts = await contactsApi.getAllContacts(currentBrand.id);
+    } catch (err) {
+      console.error('Failed to load contacts:', err);
+      contacts = [];
+    } finally {
+      isLoadingContacts = false;
+    }
+  }
 
   /**
    * Reset form to initial state.
    */
   function resetForm(): void {
-    phoneNumber = '';
+    phoneNumber = initialPhone || '';
     message = '';
     error = '';
+    selectedContactName = initialContactName || null;
+  }
+
+  /**
+   * Select a contact from the dropdown.
+   */
+  function selectContact(contact: ContactResponse): void {
+    phoneNumber = contact.phone_number;
+    selectedContactName = contact.name;
+    showContactDropdown = false;
+  }
+
+  /**
+   * Clear selected contact.
+   */
+  function clearSelectedContact(): void {
+    selectedContactName = null;
+    phoneNumber = '';
   }
 
   /**
@@ -96,6 +168,11 @@
   function handlePhoneInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     let value = input.value;
+
+    // Clear selected contact if user is typing a new number
+    if (selectedContactName && value !== phoneNumber) {
+      selectedContactName = null;
+    }
 
     // Add + if missing and starts with number
     if (value && !value.startsWith('+') && /^\d/.test(value)) {
@@ -136,7 +213,7 @@
       showSuccess('Message sent successfully');
 
       // Reload conversations to show the new one
-      await loadConversations();
+      await loadConversations(currentBrand?.id);
 
       // Emit event with phone number so parent can select the conversation
       dispatch('sent', { phoneNumber: cleanedPhone });
@@ -294,23 +371,101 @@
           </div>
         {/if}
 
-        <!-- Phone Number -->
-        <div>
+        <!-- Phone Number / Contact Search -->
+        <div class="relative">
           <label for="phone" class="block text-sm font-medium text-gray-700 mb-1.5">
             To <span class="text-red-500">*</span>
           </label>
-          <input
-            id="phone"
-            type="tel"
-            bind:value={phoneNumber}
-            on:input={handlePhoneInput}
-            placeholder="+1234567890"
-            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg
+
+          <!-- Selected Contact Display -->
+          {#if selectedContactName}
+            <div
+              class="flex items-center justify-between px-4 py-2.5 bg-green-50 border border-green-200 rounded-lg"
+            >
+              <div class="flex items-center space-x-3">
+                <div
+                  class="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-blue-500
+                            flex items-center justify-center text-white text-xs font-bold"
+                >
+                  {selectedContactName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-gray-800">{selectedContactName}</p>
+                  <p class="text-xs text-gray-500">{formatPhone(phoneNumber)}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                on:click={clearSelectedContact}
+                title="Clear selection"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          {:else}
+            <input
+              id="phone"
+              type="tel"
+              bind:value={phoneNumber}
+              on:input={handlePhoneInput}
+              placeholder="Search contacts or enter phone number"
+              class="w-full px-4 py-2.5 border border-gray-300 rounded-lg
                                focus:ring-2 focus:ring-green-500 focus:border-green-500
-                               transition-colors placeholder:text-gray-400 font-mono"
-            disabled={isSending}
-          />
-          <p class="mt-1 text-xs text-gray-500">Enter phone number in E.164 format</p>
+                               transition-colors placeholder:text-gray-400"
+              disabled={isSending}
+              autocomplete="off"
+            />
+
+            <!-- Contact Search Dropdown -->
+            {#if showContactDropdown}
+              <div
+                class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+              >
+                {#each filteredContacts as contact (contact.id)}
+                  <button
+                    type="button"
+                    class="w-full flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+                    on:click={() => selectContact(contact)}
+                  >
+                    <div
+                      class="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-blue-500
+                                flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                    >
+                      {contact.name ? contact.name.charAt(0).toUpperCase() : '#'}
+                    </div>
+                    <div class="min-w-0">
+                      {#if contact.name}
+                        <p class="text-sm font-medium text-gray-800 truncate">{contact.name}</p>
+                        <p class="text-xs text-gray-500">{formatPhone(contact.phone_number)}</p>
+                      {:else}
+                        <p class="text-sm font-medium text-gray-800">
+                          {formatPhone(contact.phone_number)}
+                        </p>
+                      {/if}
+                    </div>
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          {/if}
+
+          <p class="mt-1 text-xs text-gray-500">
+            {#if isLoadingContacts}
+              Loading contacts...
+            {:else if contacts.length > 0}
+              Type to search {contacts.length} contacts or enter a new phone number
+            {:else}
+              Enter phone number in E.164 format
+            {/if}
+          </p>
         </div>
 
         <!-- Message -->

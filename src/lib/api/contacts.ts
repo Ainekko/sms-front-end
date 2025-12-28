@@ -17,6 +17,8 @@ import { api } from './base';
 export interface ContactCreateRequest {
     phone_number: string;
     name?: string;
+    last_name?: string;
+    email?: string;
     brand_ids?: string[];
 }
 
@@ -24,6 +26,8 @@ export interface ContactResponse {
     id: string;
     phone_number: string;
     name: string | null;
+    last_name: string | null;
+    email: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -35,6 +39,25 @@ export interface ContactBrandResponse {
 // =============================================================================
 // API Functions
 // =============================================================================
+
+/**
+ * Get all contacts for a specific brand.
+ * 
+ * @param brandId - Brand ID to fetch contacts for
+ */
+export async function getAllContacts(brandId: string): Promise<ContactResponse[]> {
+    return api.get<ContactResponse[]>(`/brands/${brandId}/contacts`);
+}
+
+/**
+ * Get a contact by phone number.
+ * 
+ * @param phoneNumber - Phone number to look up
+ */
+export async function getContactByPhone(phoneNumber: string): Promise<ContactResponse> {
+    const encoded = encodeURIComponent(phoneNumber);
+    return api.get<ContactResponse>(`/contacts/phone/${encoded}`);
+}
 
 /**
  * Create a new contact.
@@ -68,6 +91,8 @@ export async function removeContactFromBrand(contactId: string, brandId: string)
  * Contacts API object for convenient access.
  */
 export const contactsApi = {
+    getAllContacts,
+    getContactByPhone,
     createContact,
     getContact,
     addContactToBrand,

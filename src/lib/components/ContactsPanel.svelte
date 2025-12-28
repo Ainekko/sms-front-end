@@ -50,6 +50,7 @@
 
   const dispatch = createEventDispatcher<{
     close: void;
+    sendMessage: { phoneNumber: string; contactName: string | null };
   }>();
 
   // ==========================================================================
@@ -78,6 +79,11 @@
   $: currentBrand = $selectedBrand;
   $: contacts = $brandsStore.contacts;
   $: isLoading = $brandsStore.isLoadingContacts;
+
+  // Load contacts when panel opens or brand changes
+  $: if (isOpen && currentBrand) {
+    loadBrandContacts(currentBrand.id);
+  }
 
   // ==========================================================================
   // Helper Functions
@@ -164,6 +170,18 @@
   function handleAddToGroup(contact: BrandContact): void {
     selectedContactIdsForGroup = [contact.id];
     showAddToGroup = true;
+  }
+
+  /**
+   * Handle send message click.
+   * Dispatches event to parent to open conversation with this contact.
+   */
+  function handleSendMessage(contact: BrandContact): void {
+    dispatch('sendMessage', {
+      phoneNumber: contact.phoneNumber,
+      contactName: contact.name
+    });
+    handleClose();
   }
 
   /**
@@ -444,6 +462,23 @@
               </div>
 
               <div class="flex space-x-1">
+                <!-- Send Message Button -->
+                <button
+                  type="button"
+                  class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                  title="Send Message"
+                  on:click={() => handleSendMessage(contact)}
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                    />
+                  </svg>
+                </button>
+
                 <!-- Add to Group Button -->
                 <button
                   type="button"

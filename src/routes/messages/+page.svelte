@@ -36,7 +36,7 @@
   // Import services and stores
   import { webSocketService } from '$lib/services/websocket';
   import { loadConversations, selectConversation } from '$lib/stores/conversationsStore';
-  import { loadBrands, type Brand } from '$lib/stores/brandsStore';
+  import { brandsStore, loadBrands, selectedBrand, type Brand } from '$lib/stores/brandsStore';
   import { connectionStore } from '$lib/stores/connectionStore';
   import { authStore, isAuthenticated, isAuthInitialized, isAdmin, currentUser } from '$lib/stores';
 
@@ -55,6 +55,18 @@
 
   /** Get brand ID from URL query param */
   $: brandId = $page.url.searchParams.get('brand');
+
+  // Sync URL brand ID to store
+  $: if (brandId) {
+    brandsStore.setSelectedBrandId(brandId);
+  }
+
+  // If store has selected brand but URL doesn't, update URL
+  $: if ($selectedBrand && !brandId) {
+    const url = new URL($page.url);
+    url.searchParams.set('brand', $selectedBrand.id);
+    goto(url.toString(), { replaceState: true, keepFocus: true });
+  }
 
   // ==========================================================================
   // Modal/Panel State
@@ -77,6 +89,12 @@
 
   /** Whether new conversation modal is open */
   let showNewConversation = false;
+
+  /** Pre-filled phone number for new conversation */
+  let newConversationPhone = '';
+
+  /** Pre-filled contact name for new conversation */
+  let newConversationName: string | null = null;
 
   // ==========================================================================
   // Event Handlers
@@ -111,6 +129,20 @@
   function handleMessageSent(event: CustomEvent<{ phoneNumber: string }>): void {
     selectConversation(event.detail.phoneNumber);
     showNewConversation = false;
+    // Reset pre-filled data
+    newConversationPhone = '';
+    newConversationName = null;
+  }
+
+  /**
+   * Handle send message request from contacts panel.
+   */
+  function handleContactSendMessage(
+    event: CustomEvent<{ phoneNumber: string; contactName: string | null }>
+  ): void {
+    newConversationPhone = event.detail.phoneNumber;
+    newConversationName = event.detail.contactName;
+    showNewConversation = true;
   }
 
   /**
@@ -203,7 +235,14 @@
             Hidden on mobile (md:block), always visible on desktop
         -->
     <aside class="hidden md:block h-full">
-      <ConversationList {brandId} on:newMessage={() => (showNewConversation = true)} />
+      <ConversationList
+        {brandId}
+        on:newMessage={() => {
+          newConversationPhone = '';
+          newConversationName = null;
+          showNewConversation = true;
+        }}
+      />
     </aside>
 
     <!-- 
@@ -230,11 +269,17 @@
 <BulkMessageModal isOpen={showBulkMessage} on:close={() => (showBulkMessage = false)} />
 
 <!-- Contacts Panel -->
-<ContactsPanel isOpen={showContacts} on:close={() => (showContacts = false)} />
+<ContactsPanel
+  isOpen={showContacts}
+  on:close={() => (showContacts = false)}
+  on:sendMessage={handleContactSendMessage}
+/>
 
 <!-- New Conversation Modal -->
 <NewConversationModal
   isOpen={showNewConversation}
+  initialPhone={newConversationPhone}
+  initialContactName={newConversationName}
   on:close={() => (showNewConversation = false)}
   on:sent={handleMessageSent}
 />

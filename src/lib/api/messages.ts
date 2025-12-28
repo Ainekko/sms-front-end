@@ -98,12 +98,13 @@ export async function sendMessage(
  */
 export async function getConversationMessages(
     phoneNumber: string,
+    brandId?: string,
     limit: number = 50,
     offset: number = 0
 ): Promise<MessageResponse[]> {
     const encodedPhone = encodeURIComponent(phoneNumber);
     return api.get<MessageResponse[]>(`/messages/conversations/${encodedPhone}`, {
-        params: { limit, offset }
+        params: { limit, offset, ...(brandId && { brand_id: brandId }) }
     });
 }
 

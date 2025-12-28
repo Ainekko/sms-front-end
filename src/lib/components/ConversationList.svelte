@@ -132,6 +132,17 @@
   }
 
   /**
+   * Get display name for a conversation.
+   * Returns contact name if available, otherwise formatted phone number.
+   *
+   * @param conversation - The conversation summary
+   * @returns Display name string
+   */
+  function getDisplayName(conversation: ConversationSummary): string {
+    return conversation.contactName || formatPhoneNumber(conversation.phoneNumber);
+  }
+
+  /**
    * Truncate a message preview if too long.
    *
    * @param text - Message text (can be null/undefined)
@@ -307,15 +318,21 @@
             <!-- Conversation Details -->
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-baseline">
-                <!-- Phone Number -->
+                <!-- Display Name (Contact Name or Phone) -->
                 <h3 class="text-sm font-semibold text-gray-900 truncate">
-                  {formatPhoneNumber(conversation.phoneNumber)}
+                  {getDisplayName(conversation)}
                 </h3>
                 <!-- Timestamp -->
                 <span class="text-xs text-gray-500 flex-shrink-0 ml-2">
                   {formatTime(conversation.lastMessageAt)}
                 </span>
               </div>
+              <!-- Phone Number (shown only if contact has a name) -->
+              {#if conversation.contactName}
+                <p class="text-xs text-gray-400 truncate">
+                  {formatPhoneNumber(conversation.phoneNumber)}
+                </p>
+              {/if}
 
               <!-- Last Message Preview -->
               <div class="flex items-center justify-between mt-1">

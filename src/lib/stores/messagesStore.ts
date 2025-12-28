@@ -107,6 +107,9 @@ export interface MessagesState {
 
     /** Current offset for pagination */
     offset: number;
+
+    /** Current brand ID */
+    brandId: string | null;
 }
 
 // =============================================================================
@@ -123,7 +126,9 @@ const initialState: MessagesState = {
     isSending: false,
     error: null,
     hasMore: false,
-    offset: 0
+    hasMore: false,
+    offset: 0,
+    brandId: null
 };
 
 // =============================================================================
@@ -150,11 +155,13 @@ function createMessagesStore() {
          * Set loading state for initial load.
          * 
          * @param phoneNumber - Phone number being loaded
+         * @param brandId - Optional brand ID
          */
-        setLoading: (phoneNumber: string) => {
+        setLoading: (phoneNumber: string, brandId?: string) => {
             update(state => ({
                 ...state,
                 currentPhoneNumber: phoneNumber,
+                brandId: brandId || null,
                 isLoading: true,
                 error: null,
                 messages: [], // Clear previous messages
@@ -328,14 +335,15 @@ export const isSendingMessage = derived(
  * Load messages for a specific phone number.
  * 
  * @param phoneNumber - Phone number to load messages for
+ * @param brandId - Optional brand ID
  * @returns Promise that resolves when loading is complete
  */
-export async function loadMessages(phoneNumber: string): Promise<void> {
-    messagesStore.setLoading(phoneNumber);
+export async function loadMessages(phoneNumber: string, brandId?: string): Promise<void> {
+    messagesStore.setLoading(phoneNumber, brandId);
 
     try {
         // Fetch messages from the API
-        const data = await messagesApi.getConversationMessages(phoneNumber, PAGE_SIZE, 0);
+        const data = await messagesApi.getConversationMessages(phoneNumber, brandId, PAGE_SIZE, 0);
 
         // Transform API response to our store format
         const messages: Message[] = data.map(item => ({
@@ -380,6 +388,7 @@ export async function loadMoreMessages(): Promise<void> {
     try {
         const data = await messagesApi.getConversationMessages(
             currentState!.currentPhoneNumber,
+            currentState!.brandId || undefined,
             PAGE_SIZE,
             currentState!.offset
         );
@@ -411,14 +420,15 @@ export async function loadMoreMessages(): Promise<void> {
  * 
  * @param toNumber - Phone number to send to (E.164 format)
  * @param messageBody - Content of the message
+ * @param brandId - Optional brand ID
  * @returns Promise that resolves with the sent message or throws on error
  */
-export async function sendMessage(toNumber: string, messageBody: string): Promise<Message> {
+export async function sendMessage(toNumber: string, messageBody: string, brandId?: string): Promise<Message> {
     messagesStore.setSending(true);
 
     try {
         // Send via API
-        const response = await messagesApi.sendMessage(toNumber, messageBody);
+        const response = await messagesApi.sendMessage(toNumber, messageBody, brandId);
 
         // Create message object from response
         const newMessage: Message = {
