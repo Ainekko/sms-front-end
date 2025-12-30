@@ -36,6 +36,7 @@
 
   import { showSuccess, showError } from '../stores/uiStore';
   import AddToGroupModal from './groups/AddToGroupModal.svelte';
+  import BulkContactImportModal from './BulkContactImportModal.svelte';
 
   // ==========================================================================
   // Props
@@ -66,6 +67,9 @@
   /** Add to group modal */
   let showAddToGroup = false;
   let selectedContactIdsForGroup: string[] = [];
+
+  /** Bulk import modal */
+  let showBulkImport = false;
 
   /** Selection State */
   let selectedContactIds: Set<string> = new Set();
@@ -360,23 +364,43 @@
             </div>
           </div>
         {:else}
-          <button
-            type="button"
-            class="w-full flex items-center justify-center space-x-2 px-4 py-2.5
-                               text-sm text-blue-600 bg-white border-2 border-dashed border-blue-300
-                               rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-colors"
-            on:click={() => (showAddForm = true)}
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            <span>Add New Contact</span>
-          </button>
+          <div class="flex space-x-2">
+            <button
+              type="button"
+              class="flex-1 flex items-center justify-center space-x-2 px-4 py-2.5
+                                 text-sm text-blue-600 bg-white border-2 border-dashed border-blue-300
+                                 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-colors"
+              on:click={() => (showAddForm = true)}
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              <span>Add Contact</span>
+            </button>
+            <button
+              type="button"
+              class="flex items-center justify-center space-x-2 px-4 py-2.5
+                                 text-sm text-emerald-600 bg-white border-2 border-dashed border-emerald-300
+                                 rounded-lg hover:bg-emerald-50 hover:border-emerald-400 transition-colors"
+              on:click={() => (showBulkImport = true)}
+              title="Import from CSV"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                />
+              </svg>
+              <span>Import CSV</span>
+            </button>
+          </div>
         {/if}
       </div>
 
@@ -532,6 +556,12 @@
   isOpen={showAddToGroup}
   contactIds={selectedContactIdsForGroup}
   on:close={() => (showAddToGroup = false)}
+/>
+
+<BulkContactImportModal
+  isOpen={showBulkImport}
+  on:close={() => (showBulkImport = false)}
+  on:imported={() => currentBrand && loadBrandContacts(currentBrand.id)}
 />
 
 <style>

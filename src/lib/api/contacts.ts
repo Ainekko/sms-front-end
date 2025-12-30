@@ -37,6 +37,30 @@ export interface ContactBrandResponse {
 }
 
 // =============================================================================
+// Bulk Import Types
+// =============================================================================
+
+export interface BulkContactImportRequest {
+    csv_content: string;
+    brand_ids?: string[];
+    skip_duplicates?: boolean;
+}
+
+export interface BulkContactImportError {
+    row: number;
+    error: string;
+}
+
+export interface BulkContactImportResponse {
+    success: boolean;
+    created_count: number;
+    skipped_count: number;
+    error_count: number;
+    errors: BulkContactImportError[];
+    contacts: ContactResponse[];
+}
+
+// =============================================================================
 // API Functions
 // =============================================================================
 
@@ -88,6 +112,16 @@ export async function removeContactFromBrand(contactId: string, brandId: string)
 }
 
 /**
+ * Bulk import contacts from CSV content.
+ * 
+ * @param data - Import request with CSV content and options
+ * @returns Import response with counts and created contacts
+ */
+export async function bulkImportContacts(data: BulkContactImportRequest): Promise<BulkContactImportResponse> {
+    return api.post<BulkContactImportResponse>('/contacts/bulk', data);
+}
+
+/**
  * Contacts API object for convenient access.
  */
 export const contactsApi = {
@@ -97,4 +131,5 @@ export const contactsApi = {
     getContact,
     addContactToBrand,
     removeContactFromBrand,
+    bulkImportContacts,
 };
