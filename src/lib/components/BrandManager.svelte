@@ -250,7 +250,7 @@
   >
     <!-- Modal Content -->
     <div
-      class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all animate-modal-in"
+      class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all animate-modal-in text-zinc-900"
       on:click|stopPropagation
     >
       <!-- Header -->

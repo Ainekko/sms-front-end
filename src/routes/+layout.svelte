@@ -25,7 +25,9 @@
   </div>
 {/if}
 
-<slot />
+<div class="text-zinc-900">
+  <slot />
+</div>
 
 <style>
   :global(body) {
