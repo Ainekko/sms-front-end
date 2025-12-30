@@ -44,6 +44,8 @@ export interface BulkContactImportRequest {
     csv_content: string;
     brand_ids?: string[];
     skip_duplicates?: boolean;
+    group_id?: string;
+    group_name?: string;
 }
 
 export interface BulkContactImportError {
@@ -58,6 +60,8 @@ export interface BulkContactImportResponse {
     error_count: number;
     errors: BulkContactImportError[];
     contacts: ContactResponse[];
+    group_id?: string;
+    group_name?: string;
 }
 
 // =============================================================================

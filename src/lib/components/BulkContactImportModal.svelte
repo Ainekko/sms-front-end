@@ -35,6 +35,7 @@
     type BulkContactImportError
   } from '../api/contacts';
   import { showSuccess, showError } from '../stores/uiStore';
+  import { groupsApi, type ContactGroup } from '../api/groups';
 
   // ==========================================================================
   // Props
@@ -58,6 +59,16 @@
 
   /** Selected brand IDs to associate contacts with */
   let selectedBrandIds: Set<string> = new Set();
+
+  /** Available groups */
+  let groups: ContactGroup[] = [];
+  let isLoadingGroups = false;
+
+  /** Selected Group ID */
+  let selectedGroupId = '';
+
+  /** New Group Name */
+  let newGroupName = '';
 
   /** Skip duplicates option */
   let skipDuplicates = true;
@@ -93,6 +104,7 @@
   // Reset state when modal opens
   $: if (isOpen) {
     resetState();
+    fetchGroups();
   }
 
   // ==========================================================================
@@ -104,6 +116,8 @@
    */
   function resetState(): void {
     selectedBrandIds = new Set();
+    selectedGroupId = '';
+    newGroupName = '';
     skipDuplicates = true;
     selectedFile = null;
     csvPreview = [];
@@ -111,6 +125,21 @@
     importResults = null;
     error = '';
     isDragOver = false;
+  }
+
+  /**
+   * Fetch available groups.
+   */
+  async function fetchGroups(): Promise<void> {
+    try {
+      isLoadingGroups = true;
+      groups = await groupsApi.listGroups();
+    } catch (err) {
+      console.error('Failed to fetch groups:', err);
+      // Don't show error to user as this is optional functionality
+    } finally {
+      isLoadingGroups = false;
+    }
   }
 
   /**
@@ -129,7 +158,7 @@
     try {
       const text = await file.text();
       const lines = text.split('\n').slice(0, 6); // Header + 5 data rows max
-      csvPreview = lines.filter(line => line.trim());
+      csvPreview = lines.filter((line) => line.trim());
       step = 'configure';
     } catch (err) {
       error = 'Failed to read file';
@@ -204,7 +233,9 @@
       importResults = await bulkImportContacts({
         csv_content: csvContent,
         brand_ids: selectedBrandIds.size > 0 ? Array.from(selectedBrandIds) : undefined,
-        skip_duplicates: skipDuplicates
+        skip_duplicates: skipDuplicates,
+        group_id: selectedGroupId || undefined,
+        group_name: !selectedGroupId && newGroupName ? newGroupName : undefined
       });
 
       step = 'results';
@@ -394,9 +425,7 @@
               <p class="text-gray-700 font-medium mb-1">
                 {isDragOver ? 'Drop CSV file here' : 'Click or drag CSV file to upload'}
               </p>
-              <p class="text-sm text-gray-500">
-                Supports CSV files with phone numbers
-              </p>
+              <p class="text-sm text-gray-500">Supports CSV files with phone numbers</p>
             </div>
 
             <input
@@ -411,19 +440,27 @@
             <div class="bg-gray-50 rounded-lg p-4 text-sm">
               <h4 class="font-medium text-gray-700 mb-2">Expected CSV Format</h4>
               <code class="block bg-white p-3 rounded border text-xs text-gray-600 overflow-x-auto">
-                First Name,Last Name,Phone Number,Email,Address<br/>
+                First Name,Last Name,Phone Number,Email,Address<br />
                 John,Little,7167035161,john@example.com,"284 Elmwood Ave"
               </code>
               <ul class="mt-3 space-y-1 text-gray-600">
                 <li class="flex items-center space-x-2">
                   <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    <path
+                      fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd"
+                    />
                   </svg>
                   <span><strong>Phone Number</strong> is required</span>
                 </li>
                 <li class="flex items-center space-x-2">
                   <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    <path
+                      fill-rule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clip-rule="evenodd"
+                    />
                   </svg>
                   <span>Phone numbers are auto-normalized to E.164 format</span>
                 </li>
@@ -431,13 +468,23 @@
             </div>
           </div>
 
-        <!-- Step: Configure -->
+          <!-- Step: Configure -->
         {:else if step === 'configure'}
           <div class="space-y-6">
             <!-- File Info -->
             <div class="flex items-center space-x-3 p-3 bg-emerald-50 rounded-lg">
-              <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                class="w-8 h-8 text-emerald-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-800 truncate">{selectedFile?.name}</p>
@@ -451,7 +498,12 @@
                 on:click={goBack}
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -462,9 +514,11 @@
               <div class="bg-gray-50 rounded-lg p-3 overflow-x-auto">
                 <table class="text-xs text-left w-full">
                   {#each csvPreview as line, i}
-                    <tr class="{i === 0 ? 'font-semibold text-gray-700' : 'text-gray-600'}">
+                    <tr class={i === 0 ? 'font-semibold text-gray-700' : 'text-gray-600'}>
                       {#each line.split(',').slice(0, 5) as cell}
-                        <td class="px-2 py-1 whitespace-nowrap">{cell.replace(/"/g, '').trim() || '-'}</td>
+                        <td class="px-2 py-1 whitespace-nowrap"
+                          >{cell.replace(/"/g, '').trim() || '-'}</td
+                        >
                       {/each}
                     </tr>
                   {/each}
@@ -507,8 +561,16 @@
                             : 'border-gray-300'}"
                         >
                           {#if selectedBrandIds.has(brand.id)}
-                            <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            <svg
+                              class="w-2.5 h-2.5 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fill-rule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clip-rule="evenodd"
+                              />
                             </svg>
                           {/if}
                         </div>
@@ -524,20 +586,80 @@
                 </div>
               {/if}
             </div>
+
+            <!-- Group Assignment -->
+            <div class="space-y-3 pt-4 border-t border-gray-100">
+              <label class="block text-sm font-medium text-gray-700">
+                Assign to Group (Optional)
+              </label>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-500">
+                <!-- Select Existing Group -->
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">Select Existing Group</label>
+                  <select
+                    bind:value={selectedGroupId}
+                    class="w-full rounded-lg p-2 border border-gray-300 bg-gray-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                    disabled={!!newGroupName}
+                  >
+                    <option value="">-- Select Group --</option>
+                    {#each groups as group}
+                      <option value={group.id}>{group.name} ({group.contact_count} contacts)</option
+                      >
+                    {/each}
+                  </select>
+                </div>
+
+                <!-- Create New Group -->
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">Or Create New Group</label>
+                  <input
+                    type="text"
+                    bind:value={newGroupName}
+                    placeholder="Enter new group name"
+                    class="w-full rounded-lg border p-2 border-gray-300 bg-gray-50 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"
+                    disabled={!!selectedGroupId}
+                  />
+                </div>
+              </div>
+
+              {#if selectedGroupId}
+                <p class="text-xs text-emerald-600">Contacts will be added to selected group.</p>
+              {:else if newGroupName}
+                <p class="text-xs text-emerald-600">
+                  New group "{newGroupName}" will be created.
+                </p>
+              {/if}
+            </div>
           </div>
 
-        <!-- Step: Importing -->
+          <!-- Step: Importing -->
         {:else if step === 'importing'}
           <div class="flex flex-col items-center justify-center py-12">
-            <svg class="w-16 h-16 text-emerald-500 animate-spin mb-4" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            <svg
+              class="w-16 h-16 text-emerald-500 animate-spin mb-4"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              ></path>
             </svg>
             <p class="text-lg font-medium text-gray-700">Importing contacts...</p>
             <p class="text-sm text-gray-500 mt-1">Please wait while we process your file</p>
           </div>
 
-        <!-- Step: Results -->
+          <!-- Step: Results -->
         {:else if step === 'results' && importResults}
           <div class="space-y-4">
             <!-- Summary Grid -->
@@ -556,18 +678,55 @@
               </div>
             </div>
 
+            <!-- Group Info -->
+            {#if importResults.group_name}
+              <div
+                class="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg text-blue-700 text-sm"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <span>Contacts assigned to group: <strong>{importResults.group_name}</strong></span>
+              </div>
+            {/if}
+
             <!-- Status Message -->
             {#if importResults.success}
               <div class="flex items-center space-x-2 p-4 bg-emerald-100 rounded-lg">
-                <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                <svg
+                  class="w-6 h-6 text-emerald-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 <p class="text-sm text-emerald-800">Import completed successfully!</p>
               </div>
             {:else}
               <div class="flex items-center space-x-2 p-4 bg-amber-100 rounded-lg">
-                <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <svg
+                  class="w-6 h-6 text-amber-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
                 </svg>
                 <p class="text-sm text-amber-800">Import completed with some issues</p>
               </div>
