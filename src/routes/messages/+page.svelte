@@ -167,6 +167,13 @@
     goto('/groups');
   }
 
+  /**
+   * Navigate to campaigns page.
+   */
+  function handleNavigateCampaigns(): void {
+    goto('/campaigns');
+  }
+
   // ==========================================================================
   // Lifecycle
   // ==========================================================================
@@ -226,6 +233,7 @@
     on:logout={handleLogout}
     on:navigateAdmin={handleNavigateAdmin}
     on:navigateGroups={handleNavigateGroups}
+    on:navigateCampaigns={handleNavigateCampaigns}
   />
 
   <!-- Main Content Area -->

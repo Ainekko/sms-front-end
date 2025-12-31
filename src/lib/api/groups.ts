@@ -61,27 +61,6 @@ export async function getGroup(groupId: string): Promise<ContactGroup> {
 }
 
 /**
- * Update a contact group.
- */
-export async function updateGroup(groupId: string, data: ContactGroupUpdate): Promise<ContactGroup> {
-    // Note: The backend might not have a PATCH endpoint for groups yet based on the provided schema,
-    // but usually it's good practice. If not, we might need to use PUT or just rely on what's available.
-    // The provided backend code shows ContactGroupUpdate schema but doesn't explicitly show a PATCH route in the snippet,
-    // but it's safe to assume standard REST practices or I can double check if needed.
-    // Wait, the user provided backend code snippet has:
-    // class ContactGroupUpdate(BaseModel)...
-    // But the router snippet only showed GET /groups, POST /groups, GET /{group_id}, DELETE /{group_id}, POST /bulk-add, DELETE ...
-    // It didn't explicitly show a PATCH/PUT for update.
-    // I will omit update for now if it's not in the backend snippet provided, or I can add it if I see it.
-    // Looking closely at the user request backend snippet...
-    // It has `ContactGroupUpdate` schema but I don't see a `@router.patch` or `@router.put` in the provided text.
-    // I will skip `updateGroup` for now to be safe, or comment it out.
-    // Actually, I'll include it but commented out or just assume it might exist, but better to stick to what I know.
-    // I'll leave it out for now to avoid errors.
-    throw new Error('Update group not implemented in backend yet');
-}
-
-/**
  * Delete a contact group.
  */
 export async function deleteGroup(groupId: string): Promise<void> {
@@ -91,8 +70,8 @@ export async function deleteGroup(groupId: string): Promise<void> {
 /**
  * Bulk add contacts to a group.
  */
-export async function bulkAddContacts(data: AddContactsToGroupRequest): Promise<ContactGroup> {
-    return api.post<ContactGroup>('/groups/bulk-add', data);
+export async function bulkAddContacts(data: AddContactsToGroupRequest): Promise<void> {
+    return api.post('/groups/bulk-add-contacts', data);
 }
 
 /**

@@ -100,11 +100,17 @@ export async function getConversationMessages(
     phoneNumber: string,
     brandId?: string,
     limit: number = 50,
-    offset: number = 0
+    offset: number = 0,
+    includeArchived: boolean = false
 ): Promise<MessageResponse[]> {
     const encodedPhone = encodeURIComponent(phoneNumber);
     return api.get<MessageResponse[]>(`/messages/conversations/${encodedPhone}`, {
-        params: { limit, offset, ...(brandId && { brand_id: brandId }) }
+        params: {
+            limit,
+            offset,
+            ...(brandId && { brand_id: brandId }),
+            include_archived: includeArchived
+        }
     });
 }
 

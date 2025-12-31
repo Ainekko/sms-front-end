@@ -1,27 +1,5 @@
-<!--
-  ConversationList Component
-  ===========================
-  Displays the list of SMS conversations in the sidebar.
-  
-  This component:
-  - Shows all conversations with phone numbers
-  - Displays last message preview and timestamp
-  - Highlights selected conversation
-  - Shows unread message count
-  - Handles conversation selection
-  
-  Props: None
-  
-  Events: None (uses stores directly)
-  
-  Usage:
-    <ConversationList />
--->
-
 <script lang="ts">
-  import { onMount } from 'svelte';
-
-  // Import stores and actions
+  import { onMount, createEventDispatcher } from 'svelte';
   import {
     conversationsStore,
     selectedConversationId,
@@ -29,6 +7,8 @@
     loadConversations,
     type ConversationSummary
   } from '../stores/conversationsStore';
+  import { archiveContact, unarchiveContact } from '$lib/api/contacts';
+  import { showSuccess, showError } from '$lib/stores/uiStore';
 
   // ==========================================================================
   // Props
@@ -37,168 +17,217 @@
   /** Brand ID to filter conversations (from URL) */
   export let brandId: string | null = null;
 
+  /** Optional: Override conversations list (for Campaigns mode) */
+  export let customConversations: any[] | null = null;
+
+  /** Mode: 'default' (Brand/Global) or 'campaign' */
+  export let mode: 'default' | 'campaign' = 'default';
+
+  /** Optional: Loading state (for Campaigns mode) */
+  export let isLoading: boolean = false;
+
+  // ==========================================================================
+  // Internal State
+  // ==========================================================================
+
+  let activeFolder: 'all' | 'unread' | 'archived' = 'all';
+  const dispatch = createEventDispatcher();
+
   // ==========================================================================
   // Reactive State
   // ==========================================================================
 
-  // Subscribe to the conversations store
-  $: conversations = $conversationsStore.conversations;
-  $: isLoading = $conversationsStore.isLoading;
-  $: error = $conversationsStore.error;
+  // Use custom conversations if provided, otherwise use store
+  $: rawConversations = customConversations ?? $conversationsStore.conversations;
+  $: effectiveLoading = mode === 'campaign' ? isLoading : $conversationsStore.isLoading;
+  $: error = mode === 'campaign' ? null : $conversationsStore.error;
   $: selectedId = $selectedConversationId;
 
+  $: {
+    if (mode === 'campaign') {
+      console.log('ConversationList [Campaign Mode] Raw:', rawConversations);
+      console.log('ConversationList [Campaign Mode] Loading:', effectiveLoading);
+    }
+  }
+
+  // Filter conversations based on active folder
+  // Filter conversations based on active folder
+  // Filter conversations based on active folder
+  $: filteredConversations = (() => {
+    const uniqueMap = new Map();
+
+    // Deduplicate based on ID or Phone Number
+    rawConversations.forEach((c: any) => {
+      const key = c.id || c.phoneNumber || c.phone_number;
+      if (key && !uniqueMap.has(key)) {
+        uniqueMap.set(key, c);
+      }
+    });
+
+    const uniqueConversations = Array.from(uniqueMap.values());
+
+    if (mode === 'campaign') {
+      console.log('Unique Conversations:', uniqueConversations);
+    }
+
+    return uniqueConversations.filter((c: any) => {
+      // In campaign mode, we might have different field names or need to adapt
+      // Default to false if undefined, as campaign conversations might not have this field populated yet
+      const isArchived = c.contact?.is_archived || c.isArchived || false;
+
+      if (activeFolder === 'archived') return isArchived;
+      if (isArchived) return false; // Hide archived from 'all' and 'unread'
+
+      if (activeFolder === 'unread') {
+        // Logic: Unread count > 0 OR last message is inbound (waiting for reply)
+        // Adapting for different API responses
+        const direction = c.lastMessageDirection || c.last_message_direction;
+        const count = c.unreadCount || c.unread_count || 0;
+        return count > 0 || direction === 'inbound';
+      }
+      return true;
+    });
+  })();
+
   // ==========================================================================
-  // Reactive Loading - reload when brandId changes
+  // Reactive Loading (Default Mode Only)
   // ==========================================================================
 
-  // Track the last loaded brandId to prevent duplicate loads
   let lastLoadedBrandId: string | null | undefined;
 
-  $: if (brandId !== lastLoadedBrandId) {
+  $: if (mode === 'default' && brandId !== lastLoadedBrandId) {
     lastLoadedBrandId = brandId;
     loadConversations(brandId ?? undefined);
   }
 
   // ==========================================================================
-  // Lifecycle
-  // ==========================================================================
-
-  /**
-   * Load conversations when component mounts.
-   */
-  onMount(() => {
-    // Initial load handled by reactive statement above
-  });
-
-  // ==========================================================================
   // Helper Functions
   // ==========================================================================
 
-  /**
-   * Format a phone number for display.
-   * Adds formatting like (123) 456-7890 for US numbers.
-   *
-   * @param phone - Phone number in E.164 format
-   * @returns Formatted phone number string
-   */
   function formatPhoneNumber(phone: string): string {
-    // Remove the + prefix if present
+    if (!phone) return 'Unknown';
     const digits = phone.replace(/^\+/, '');
-
-    // Format US numbers (11 digits starting with 1)
     if (digits.length === 11 && digits.startsWith('1')) {
-      const area = digits.slice(1, 4);
-      const prefix = digits.slice(4, 7);
-      const line = digits.slice(7);
-      return `(${area}) ${prefix}-${line}`;
+      return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
     }
-
-    // Format 10-digit numbers
     if (digits.length === 10) {
-      const area = digits.slice(0, 3);
-      const prefix = digits.slice(3, 6);
-      const line = digits.slice(6);
-      return `(${area}) ${prefix}-${line}`;
+      return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
     }
-
-    // Return as-is for other formats
     return phone;
   }
 
-  /**
-   * Format a timestamp for display.
-   * Shows time if today, otherwise shows date.
-   *
-   * @param date - Date to format
-   * @returns Formatted time/date string
-   */
-  function formatTime(date: Date): string {
+  function formatTime(dateInput: Date | string): string {
+    if (!dateInput) return '';
+    const date = new Date(dateInput);
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
 
     if (isToday) {
-      // Show time for today's messages
-      return date.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+
+  function getDisplayName(conversation: any): string {
+    // Handle both camelCase (Store) and snake_case (API)
+    const name = conversation.contactName || conversation.contact_name;
+    const phone = conversation.phoneNumber || conversation.phone_number;
+    return name || formatPhoneNumber(phone);
+  }
+
+  function getMessagePreview(conversation: any): string {
+    const rawText =
+      conversation.lastMessage || conversation.last_message_body || conversation.last_message;
+
+    let text = '';
+    if (typeof rawText === 'object' && rawText !== null) {
+      text =
+        rawText.body ||
+        rawText.text ||
+        rawText.content ||
+        rawText.message ||
+        JSON.stringify(rawText);
+    } else {
+      text = rawText ? String(rawText) : '';
     }
 
-    // Show date for older messages
-    return date.toLocaleDateString([], {
-      month: 'short',
-      day: 'numeric'
-    });
+    if (text.length <= 50) return text;
+    return text.substring(0, 50).trim() + '...';
   }
 
-  /**
-   * Get display name for a conversation.
-   * Returns contact name if available, otherwise formatted phone number.
-   *
-   * @param conversation - The conversation summary
-   * @returns Display name string
-   */
-  function getDisplayName(conversation: ConversationSummary): string {
-    return conversation.contactName || formatPhoneNumber(conversation.phoneNumber);
+  function getDirection(conversation: any): string {
+    return conversation.lastMessageDirection || conversation.last_message_direction || '';
   }
 
-  /**
-   * Truncate a message preview if too long.
-   *
-   * @param text - Message text (can be null/undefined)
-   * @param maxLength - Maximum characters to show
-   * @returns Truncated text with ellipsis if needed
-   */
-  function truncateMessage(text: string | null | undefined, maxLength: number = 50): string {
-    // Handle null, undefined, or non-string values
-    if (!text || typeof text !== 'string') return '';
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength).trim() + '...';
+  function getUnreadCount(conversation: any): number {
+    return conversation.unreadCount || conversation.unread_count || 0;
   }
 
-  /**
-   * Handle clicking on a conversation.
-   * Selects the conversation and marks it as read.
-   *
-   * @param phoneNumber - Phone number of the conversation
-   */
-  function handleSelectConversation(phoneNumber: string): void {
-    selectConversation(phoneNumber);
+  function getContactId(conversation: any): string {
+    return conversation.contactId || conversation.contact_id;
   }
 
-  /**
-   * Retry loading conversations after an error.
-   */
+  function getIsArchived(conversation: any): boolean {
+    return conversation.contact?.is_archived || conversation.isArchived;
+  }
+
+  // ==========================================================================
+  // Actions
+  // ==========================================================================
+
+  function handleSelectConversation(conversation: any): void {
+    const phone = conversation.phoneNumber || conversation.phone_number;
+    const id = conversation.id || phone; // Use ID if available, else phone
+
+    if (mode === 'default') {
+      selectConversation(phone);
+    } else {
+      dispatch('select', id);
+    }
+  }
+
   function handleRetry(): void {
-    loadConversations();
+    if (mode === 'default') loadConversations();
+    else dispatch('retry');
   }
 
-  // ==========================================================================
-  // Event Dispatcher
-  // ==========================================================================
+  async function handleArchive(conversation: any, e: Event) {
+    e.stopPropagation();
+    const contactId = getContactId(conversation);
+    const isArchived = getIsArchived(conversation);
 
-  import { createEventDispatcher } from 'svelte';
+    if (!contactId) return;
 
-  const dispatch = createEventDispatcher<{
-    newMessage: void;
-  }>();
+    try {
+      if (isArchived) {
+        await unarchiveContact(contactId);
+        showSuccess('Contact unarchived');
+      } else {
+        await archiveContact(contactId);
+        showSuccess('Contact archived');
+      }
+      dispatch('refresh'); // Notify parent to reload data
+      if (mode === 'default') loadConversations(brandId ?? undefined);
+    } catch (err) {
+      showError('Failed to update archive status');
+    }
+  }
 </script>
 
-<!-- Conversations Sidebar Container -->
-<div class="flex flex-col h-full bg-white border-r border-gray-200 overflow-hidden w-80">
+<div class="flex flex-col h-full bg-white border-r border-gray-200 overflow-hidden w-full">
   <!-- Header -->
   <div class="p-4 border-b border-gray-100">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-xl font-bold text-gray-800">Messages</h2>
 
-      <!-- Refresh button -->
+      <!-- Refresh/Retry -->
       <button
         class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
         on:click={handleRetry}
         title="Refresh conversations"
       >
         <svg
-          class="w-5 h-5 {isLoading ? 'animate-spin' : ''}"
+          class="w-5 h-5 {effectiveLoading ? 'animate-spin' : ''}"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -213,25 +242,47 @@
       </button>
     </div>
 
-    <!-- New Message Button -->
-    <button
-      class="w-full flex items-center justify-center space-x-2 px-4 py-2.5
-                   text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600
-                   rounded-lg hover:from-green-600 hover:to-emerald-700
-                   transition-all shadow-sm hover:shadow-md"
-      on:click={() => dispatch('newMessage')}
-    >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-      </svg>
-      <span>New Message</span>
-    </button>
+    <!-- Folders -->
+    <div class="flex space-x-1 bg-gray-100 p-1 rounded-xl mb-3">
+      {#each ['all', 'unread', 'archived'] as folder}
+        <button
+          class="flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize {activeFolder ===
+          folder
+            ? 'bg-white text-gray-900 shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'}"
+          on:click={() => (activeFolder = folder)}
+        >
+          {folder}
+        </button>
+      {/each}
+    </div>
+
+    <!-- New Message Button (Only in Default Mode) -->
+    {#if mode === 'default'}
+      <button
+        class="w-full flex items-center justify-center space-x-2 px-4 py-2.5
+                    text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600
+                    rounded-lg hover:from-green-600 hover:to-emerald-700
+                    transition-all shadow-sm hover:shadow-md"
+        on:click={() => dispatch('newMessage')}
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+        <span>New Message</span>
+      </button>
+    {/if}
   </div>
 
   <!-- Content Area -->
   <div class="flex-1 overflow-y-auto">
     <!-- Loading State -->
-    {#if isLoading && conversations.length === 0}
+    {#if effectiveLoading && rawConversations.length === 0}
       <div class="flex items-center justify-center h-32">
         <div class="flex flex-col items-center space-y-2">
           <svg class="w-8 h-8 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -241,10 +292,9 @@
               class="opacity-75"
               fill="currentColor"
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            >
-            </path>
+            ></path>
           </svg>
-          <span class="text-sm text-gray-500">Loading conversations...</span>
+          <span class="text-sm text-gray-500">Loading...</span>
         </div>
       </div>
 
@@ -252,117 +302,99 @@
     {:else if error}
       <div class="flex items-center justify-center h-32 p-4">
         <div class="text-center">
-          <svg
-            class="w-12 h-12 text-red-400 mx-auto mb-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p class="text-sm text-gray-600 mb-2">{error}</p>
+          <p class="text-sm text-red-500 mb-2">{error}</p>
           <button
             class="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            on:click={handleRetry}
+            on:click={handleRetry}>Try Again</button
           >
-            Try Again
-          </button>
         </div>
       </div>
 
       <!-- Empty State -->
-    {:else if conversations.length === 0}
+    {:else if filteredConversations.length === 0}
       <div class="flex items-center justify-center h-32 p-4">
         <div class="text-center">
-          <svg
-            class="w-12 h-12 text-gray-300 mx-auto mb-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-            />
-          </svg>
-          <p class="text-sm text-gray-500">No conversations yet</p>
+          <p class="text-sm text-gray-500">No conversations in {activeFolder}</p>
         </div>
       </div>
 
       <!-- Conversation List -->
     {:else}
-      {#each conversations as conversation (conversation.phoneNumber)}
-        <button
-          class="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-50
-                    {selectedId === conversation.phoneNumber
+      {#each filteredConversations as conversation (conversation.id || conversation.phoneNumber || conversation.phone_number)}
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <div
+          class="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-50 cursor-pointer group relative
+                    {selectedId === (conversation.phoneNumber || conversation.id)
             ? 'bg-blue-50 hover:bg-blue-50 border-l-4 border-l-blue-500'
             : 'border-l-4 border-l-transparent'}"
-          on:click={() => handleSelectConversation(conversation.phoneNumber)}
+          on:click={() => handleSelectConversation(conversation)}
         >
           <div class="flex items-start space-x-3">
-            <!-- Avatar (using first digit of phone) -->
+            <!-- Avatar -->
             <div
-              class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500
-                            flex items-center justify-center text-white font-semibold flex-shrink-0"
+              class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold flex-shrink-0"
             >
-              {conversation.phoneNumber.replace(/\D/g, '').slice(-2, -1) || '?'}
+              {(conversation.phoneNumber || conversation.phone_number || '?')
+                .replace(/\D/g, '')
+                .slice(-2, -1)}
             </div>
 
-            <!-- Conversation Details -->
+            <!-- Details -->
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-baseline">
-                <!-- Display Name (Contact Name or Phone) -->
                 <h3 class="text-sm font-semibold text-gray-900 truncate">
                   {getDisplayName(conversation)}
                 </h3>
-                <!-- Timestamp -->
                 <span class="text-xs text-gray-500 flex-shrink-0 ml-2">
-                  {formatTime(conversation.lastMessageAt)}
+                  {formatTime(conversation.lastMessageAt || conversation.last_message_at)}
                 </span>
               </div>
-              <!-- Phone Number (shown only if contact has a name) -->
-              {#if conversation.contactName}
-                <p class="text-xs text-gray-400 truncate">
-                  {formatPhoneNumber(conversation.phoneNumber)}
-                </p>
-              {/if}
 
-              <!-- Last Message Preview -->
               <div class="flex items-center justify-between mt-1">
                 <p
-                  class="text-sm truncate
-                                    {conversation.unreadCount > 0
+                  class="text-sm truncate {getUnreadCount(conversation) > 0
                     ? 'font-medium text-gray-900'
                     : 'text-gray-600'}"
                 >
-                  <!-- Direction indicator -->
-                  {#if conversation.lastMessageDirection === 'outbound'}
+                  {#if getDirection(conversation) === 'outbound'}
                     <span class="text-gray-400">You: </span>
                   {/if}
-                  {truncateMessage(conversation.lastMessage || '')}
+                  {getMessagePreview(conversation)}
                 </p>
 
-                <!-- Unread Count Badge -->
-                {#if conversation.unreadCount > 0}
-                  <span
-                    class="ml-2 inline-flex items-center justify-center
-                                        min-w-[20px] h-5 px-1.5 text-xs font-bold text-white
-                                        bg-blue-500 rounded-full flex-shrink-0"
+                <div class="flex items-center space-x-2">
+                  {#if getUnreadCount(conversation) > 0}
+                    <span
+                      class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-blue-500 rounded-full flex-shrink-0"
+                    >
+                      {getUnreadCount(conversation) > 99 ? '99+' : getUnreadCount(conversation)}
+                    </span>
+                  {/if}
+
+                  <!-- Archive Button (Visible on hover or if archived) -->
+                  <button
+                    class="text-gray-300 hover:text-gray-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity {getIsArchived(
+                      conversation
+                    )
+                      ? 'opacity-100 text-yellow-500'
+                      : ''}"
+                    on:click={(e) => handleArchive(conversation, e)}
+                    title={getIsArchived(conversation) ? 'Unarchive' : 'Archive'}
                   >
-                    {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
-                  </span>
-                {/if}
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </button>
+        </div>
       {/each}
     {/if}
   </div>

@@ -30,6 +30,7 @@ export interface ContactResponse {
     email: string | null;
     created_at: string;
     updated_at: string;
+    is_archived?: boolean;
 }
 
 export interface ContactBrandResponse {
@@ -126,6 +127,34 @@ export async function bulkImportContacts(data: BulkContactImportRequest): Promis
 }
 
 /**
+ * Archive a contact.
+ */
+export async function archiveContact(contactId: string): Promise<void> {
+    return api.post(`/contacts/${contactId}/archive`, {});
+}
+
+/**
+ * Unarchive a contact.
+ */
+export async function unarchiveContact(contactId: string): Promise<void> {
+    return api.post(`/contacts/${contactId}/unarchive`, {});
+}
+
+/**
+ * Get all archived contacts.
+ */
+export async function getArchivedContacts(): Promise<ContactResponse[]> {
+    return api.get<ContactResponse[]>('/contacts/archived');
+}
+
+/**
+ * Bulk archive contacts.
+ */
+export async function bulkArchiveContacts(contactIds: string[]): Promise<{ message: string; count: number }> {
+    return api.post<{ message: string; count: number }>('/contacts/bulk-archive', { contact_ids: contactIds });
+}
+
+/**
  * Contacts API object for convenient access.
  */
 export const contactsApi = {
@@ -136,4 +165,8 @@ export const contactsApi = {
     addContactToBrand,
     removeContactFromBrand,
     bulkImportContacts,
+    archiveContact,
+    unarchiveContact,
+    getArchivedContacts,
+    bulkArchiveContacts
 };
