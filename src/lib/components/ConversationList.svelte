@@ -31,6 +31,7 @@
   // ==========================================================================
 
   let activeFolder: 'all' | 'unread' | 'archived' = 'all';
+  let searchQuery = '';
   const dispatch = createEventDispatcher();
 
   // ==========================================================================
@@ -50,8 +51,6 @@
     }
   }
 
-  // Filter conversations based on active folder
-  // Filter conversations based on active folder
   // Filter conversations based on active folder
   $: filteredConversations = (() => {
     const uniqueMap = new Map();
@@ -75,16 +74,28 @@
       // Default to false if undefined, as campaign conversations might not have this field populated yet
       const isArchived = c.contact?.is_archived || c.isArchived || false;
 
-      if (activeFolder === 'archived') return isArchived;
-      if (isArchived) return false; // Hide archived from 'all' and 'unread'
+      // Folder filtering
+      if (activeFolder === 'archived' && !isArchived) return false;
+      if (activeFolder !== 'archived' && isArchived) return false;
 
       if (activeFolder === 'unread') {
-        // Logic: Unread count > 0 OR last message is inbound (waiting for reply)
-        // Adapting for different API responses
         const direction = c.lastMessageDirection || c.last_message_direction;
         const count = c.unreadCount || c.unread_count || 0;
-        return count > 0 || direction === 'inbound';
+        if (count === 0 && direction !== 'inbound') return false;
       }
+
+      // Search filtering
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const name = getDisplayName(c).toLowerCase();
+        const phone = (c.phoneNumber || c.phone_number || '').toLowerCase();
+        const message = getMessagePreview(c).toLowerCase();
+
+        if (!name.includes(query) && !phone.includes(query) && !message.includes(query)) {
+          return false;
+        }
+      }
+
       return true;
     });
   })();
@@ -240,6 +251,29 @@
           />
         </svg>
       </button>
+    </div>
+
+    <!-- Search -->
+    <div class="mb-3 relative">
+      <input
+        type="text"
+        bind:value={searchQuery}
+        placeholder="Search messages..."
+        class="w-full pl-9 pr-4 py-2 bg-gray-100 border-transparent focus:bg-white focus:border-blue-500 rounded-lg text-sm transition-all outline-none"
+      />
+      <svg
+        class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
+      </svg>
     </div>
 
     <!-- Folders -->
