@@ -1,9 +1,30 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import { campaignsStore, loadCampaigns, isLoading } from '$lib/stores/campaignsStore';
   import CampaignCard from '$lib/components/campaigns/CampaignCard.svelte';
+  import type { CampaignResponse } from '$lib/api/campaigns';
 
-  $: campaigns = $campaignsStore.campaigns;
+  // URL-based status filter
+  type StatusFilter = 'all' | 'pending' | 'processing' | 'completed' | 'failed';
+  $: urlStatus = ($page.url.searchParams.get('status') as StatusFilter) || 'all';
+
+  $: allCampaigns = $campaignsStore.campaigns;
+  $: campaigns =
+    urlStatus === 'all'
+      ? allCampaigns
+      : allCampaigns.filter((c: CampaignResponse) => c.status === urlStatus);
+
+  function setStatusFilter(status: StatusFilter) {
+    const url = new URL($page.url);
+    if (status === 'all') {
+      url.searchParams.delete('status');
+    } else {
+      url.searchParams.set('status', status);
+    }
+    goto(url.toString(), { replaceState: true, keepFocus: true });
+  }
 
   onMount(async () => {
     await loadCampaigns();
@@ -51,6 +72,39 @@
             New Campaign
           </a>
         </div>
+      </div>
+
+      <!-- Status Filter Tabs -->
+      <div class="flex space-x-1 mt-4 -mb-px">
+        {#each [{ id: 'all', label: 'All' }, { id: 'pending', label: 'Pending' }, { id: 'processing', label: 'Processing' }, { id: 'completed', label: 'Completed' }, { id: 'failed', label: 'Failed' }] as filter}
+          <button
+            class="px-4 py-2 text-sm font-medium border-b-2 transition-colors {urlStatus ===
+            filter.id
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+            on:click={() => setStatusFilter(filter.id)}
+          >
+            {filter.label}
+            {#if filter.id === 'all'}
+              <span class="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600"
+                >{allCampaigns.length}</span
+              >
+            {:else}
+              {@const count = allCampaigns.filter((c) => c.status === filter.id).length}
+              {#if count > 0}
+                <span
+                  class="ml-1.5 px-1.5 py-0.5 text-xs rounded-full {filter.id === 'completed'
+                    ? 'bg-green-100 text-green-700'
+                    : filter.id === 'failed'
+                      ? 'bg-red-100 text-red-700'
+                      : filter.id === 'processing'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-amber-100 text-amber-700'}">{count}</span
+                >
+              {/if}
+            {/if}
+          </button>
+        {/each}
       </div>
     </div>
   </div>

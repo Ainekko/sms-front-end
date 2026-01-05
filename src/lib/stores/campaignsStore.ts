@@ -5,7 +5,7 @@
  */
 
 import { writable, derived } from 'svelte/store';
-import { campaignsApi, type CampaignResponse, type CreateCampaignRequest } from '../api/campaigns';
+import { campaignsApi, type CampaignResponse, type CreateCampaignRequest, type CampaignInsightsResponse } from '../api/campaigns';
 
 // =============================================================================
 // Types
@@ -14,16 +14,20 @@ import { campaignsApi, type CampaignResponse, type CreateCampaignRequest } from 
 export interface CampaignsState {
     campaigns: CampaignResponse[];
     currentCampaign: CampaignResponse | null;
+    currentInsights: CampaignInsightsResponse | null;
     campaignConversations: any[];
     isLoading: boolean;
+    isLoadingInsights: boolean;
     error: string | null;
 }
 
 const initialState: CampaignsState = {
     campaigns: [],
     currentCampaign: null,
+    currentInsights: null,
     campaignConversations: [],
     isLoading: false,
+    isLoadingInsights: false,
     error: null
 };
 
@@ -37,9 +41,11 @@ function createCampaignsStore() {
     return {
         subscribe,
         setLoading: (loading: boolean) => update(s => ({ ...s, isLoading: loading, error: loading ? null : s.error })),
+        setLoadingInsights: (loading: boolean) => update((s: CampaignsState) => ({ ...s, isLoadingInsights: loading })),
         setError: (error: string | null) => update(s => ({ ...s, isLoading: false, error })),
         setCampaigns: (campaigns: CampaignResponse[]) => update(s => ({ ...s, campaigns, isLoading: false })),
-        setCurrentCampaign: (campaign: CampaignResponse | null) => update(s => ({ ...s, currentCampaign: campaign, campaignConversations: [], isLoading: false })),
+        setCurrentCampaign: (campaign: CampaignResponse | null) => update(s => ({ ...s, currentCampaign: campaign, currentInsights: null, campaignConversations: [], isLoading: false })),
+        setCurrentInsights: (insights: CampaignInsightsResponse | null) => update((s: CampaignsState) => ({ ...s, currentInsights: insights, isLoadingInsights: false })),
         addCampaign: (campaign: CampaignResponse) => update(s => ({ ...s, campaigns: [campaign, ...s.campaigns], isLoading: false })),
         updateCampaignInList: (campaign: CampaignResponse) => update(s => ({
             ...s,
@@ -59,9 +65,11 @@ export const campaignsStore = createCampaignsStore();
 // =============================================================================
 
 export const isLoading = derived(campaignsStore, $s => $s.isLoading);
-export const campaignError = derived(campaignsStore, $s => $s.error);
+export const isLoadingInsights = derived(campaignsStore, ($s: CampaignsState) => $s.isLoadingInsights);
+export const campaignError = derived(campaignsStore, ($s: CampaignsState) => $s.error);
 export const allCampaigns = derived(campaignsStore, $s => $s.campaigns);
 export const currentCampaign = derived(campaignsStore, $s => $s.currentCampaign);
+export const currentInsights = derived(campaignsStore, $s => $s.currentInsights);
 export const campaignConversations = derived(campaignsStore, $s => $s.campaignConversations);
 
 // =============================================================================
@@ -137,6 +145,20 @@ export async function loadCampaignConversations(id: string) {
     } catch (error) {
         console.error('Failed to load campaign conversations:', error);
         campaignsStore.setError(error instanceof Error ? error.message : 'Failed to load campaign conversations');
+    }
+}
+
+/**
+ * Load insights for a campaign.
+ */
+export async function loadCampaignInsights(id: string) {
+    campaignsStore.setLoadingInsights(true);
+    try {
+        const insights = await campaignsApi.getCampaignInsights(id);
+        campaignsStore.setCurrentInsights(insights);
+    } catch (error) {
+        console.error('Failed to load campaign insights:', error);
+        campaignsStore.setCurrentInsights(null);
     }
 }
 

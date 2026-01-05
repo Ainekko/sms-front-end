@@ -51,6 +51,29 @@ export interface ExecuteCampaignResponse {
     status: string;
 }
 
+export interface CampaignInsightsResponse {
+    id: string;
+    campaign_id: string;
+    calculated_at: string;
+
+    // Core delivery metrics
+    total_recipients: number;
+    total_sent: number;
+    total_delivered: number;
+    total_failed: number;
+
+    // Engagement metrics
+    total_replies: number;
+    unique_responders: number;
+    reply_rate: number; // 0.0 - 1.0
+    avg_response_time_mins: number | null;
+
+    // AI-ready fields (reserved for future)
+    ai_summary: string | null;
+    ai_sentiment_score: number | null;
+    ai_insights_json: string | null;
+}
+
 // =============================================================================
 // API Functions
 // =============================================================================
@@ -93,6 +116,13 @@ export async function getCampaignConversations(id: string): Promise<any[]> {
 }
 
 /**
+ * Get insights/metrics for a campaign.
+ */
+export async function getCampaignInsights(id: string): Promise<CampaignInsightsResponse> {
+    return api.get<CampaignInsightsResponse>(`/campaigns/${id}/insights`);
+}
+
+/**
  * Campaigns API object.
  */
 export const campaignsApi = {
@@ -100,5 +130,6 @@ export const campaignsApi = {
     getCampaign,
     createCampaign,
     executeCampaign,
-    getCampaignConversations
+    getCampaignConversations,
+    getCampaignInsights
 };

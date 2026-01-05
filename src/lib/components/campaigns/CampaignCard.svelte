@@ -1,15 +1,21 @@
 <script lang="ts">
   import type { CampaignResponse } from '$lib/api/campaigns';
   import { format } from 'date-fns';
+  import { createEventDispatcher } from 'svelte';
+  import { executeCampaign, startPolling } from '$lib/stores/campaignsStore';
+  import { showSuccess, showError } from '$lib/stores/uiStore';
 
   export let campaign: CampaignResponse;
+
+  const dispatch = createEventDispatcher();
+  let isExecuting = false;
 
   function getStatusColor(status: string) {
     switch (status) {
       case 'completed':
         return 'bg-green-100 text-green-700';
       case 'processing':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-blue-100 text-blue-700 animate-pulse';
       case 'failed':
         return 'bg-red-100 text-red-700';
       case 'cancelled':
@@ -25,6 +31,24 @@
     if (c.target_type === 'contacts')
       return `Contact: ${c.target_contact_name || 'Single Contact'}`;
     return 'Unknown Target';
+  }
+
+  async function handleExecute(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm('Run this campaign now?')) return;
+
+    isExecuting = true;
+    try {
+      await executeCampaign(campaign.id);
+      showSuccess('Campaign started');
+      startPolling(campaign.id);
+    } catch (error) {
+      showError('Failed to start campaign');
+    } finally {
+      isExecuting = false;
+    }
   }
 </script>
 
@@ -80,9 +104,35 @@
       >
       <span class="text-sm font-bold text-gray-900">{campaign.total_delivered || 0}</span>
     </div>
-    <div class="flex flex-col items-end">
-      <span class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Failed</span>
-      <span class="text-sm font-bold text-red-600">{campaign.total_failed || 0}</span>
-    </div>
+    {#if campaign.status === 'pending'}
+      <!-- Play Button -->
+      <button
+        class="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 text-white shadow-lg shadow-green-500/30 hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+        on:click={handleExecute}
+        disabled={isExecuting}
+        title="Run Campaign"
+      >
+        {#if isExecuting}
+          <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+        {:else}
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        {/if}
+      </button>
+    {:else}
+      <div class="flex flex-col items-end">
+        <span class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Failed</span>
+        <span class="text-sm font-bold text-red-600">{campaign.total_failed || 0}</span>
+      </div>
+    {/if}
   </div>
 </a>

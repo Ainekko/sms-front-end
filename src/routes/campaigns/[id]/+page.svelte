@@ -10,42 +10,72 @@
     startPolling,
     stopPolling,
     loadCampaignConversations,
-    isLoading
+    loadCampaignInsights,
+    isLoading,
+    isLoadingInsights,
+    currentInsights
   } from '$lib/stores/campaignsStore';
   import { showSuccess, showError } from '$lib/stores/uiStore';
   import CampaignForm from '$lib/components/campaigns/CampaignForm.svelte';
+  import CampaignInsightsPanel from '$lib/components/campaigns/CampaignInsightsPanel.svelte';
   import ConversationList from '$lib/components/ConversationList.svelte';
   import type { CreateCampaignRequest } from '$lib/api/campaigns';
-
   import CampaignChatWindow from '$lib/components/campaigns/CampaignChatWindow.svelte';
 
   $: id = $page.params.id;
   $: isNew = id === 'new';
   $: campaign = $campaignsStore.currentCampaign;
   $: conversations = $campaignsStore.campaignConversations;
+  $: insights = $currentInsights;
 
-  // View state
-  let view: 'details' | 'chat' = 'details';
+  // URL-based tab state
+  type TabType = 'details' | 'insights' | 'conversations';
+  $: urlTab = ($page.url.searchParams.get('tab') as TabType) || 'details';
+  $: activeTab = isNew ? 'details' : urlTab;
+
+  // Chat view state (overlays the main content)
+  let showChat = false;
   let selectedConversationId: string | null = null;
   let selectedContactName: string | null = null;
 
-  // Polling for conversations if campaign is active
-  let conversationPollingInterval: any;
+  // Polling interval
+  let conversationPollingInterval: ReturnType<typeof setInterval> | null = null;
+
+  function setTab(tab: string) {
+    if (isNew) return;
+    const url = new URL($page.url);
+    url.searchParams.set('tab', tab);
+    goto(url.toString(), { replaceState: true, keepFocus: true });
+  }
 
   onMount(async () => {
     if (!isNew) {
       await loadCampaign(id);
+
       // Start polling if status is processing
       if (campaign && ['processing', 'pending'].includes(campaign.status)) {
         startPolling(id);
       }
 
-      // Load conversations initially
-      await loadCampaignConversations(id);
+      // Load data based on initial tab
+      if (urlTab === 'insights' || urlTab === 'details') {
+        await loadCampaignInsights(id);
+      }
+      if (urlTab === 'conversations') {
+        await loadCampaignConversations(id);
+      }
     } else {
       campaignsStore.setCurrentCampaign(null);
     }
   });
+
+  // Reactively load insights when on details tab (insights merged in)
+  $: if (!isNew && activeTab === 'details' && !insights) {
+    loadCampaignInsights(id);
+  }
+  $: if (!isNew && activeTab === 'conversations' && conversations.length === 0) {
+    loadCampaignConversations(id);
+  }
 
   onDestroy(() => {
     stopPolling();
@@ -78,15 +108,15 @@
   function getStatusColor(status: string) {
     switch (status) {
       case 'completed':
-        return 'bg-green-100 text-green-700';
+        return 'bg-green-100 text-green-700 border-green-200';
       case 'processing':
-        return 'bg-blue-100 text-blue-700';
+        return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'failed':
-        return 'bg-red-100 text-red-700';
+        return 'bg-red-100 text-red-700 border-red-200';
       case 'cancelled':
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-gray-100 text-gray-700 border-gray-200';
       default:
-        return 'bg-yellow-100 text-yellow-700';
+        return 'bg-amber-100 text-amber-700 border-amber-200';
     }
   }
 
@@ -94,7 +124,6 @@
     const conversationId = e.detail;
     selectedConversationId = conversationId;
 
-    // Find contact name from conversations list
     const conversation = conversations.find(
       (c: any) =>
         c.id === conversationId ||
@@ -102,8 +131,13 @@
         c.phoneNumber === conversationId
     );
     selectedContactName = conversation?.contact_name || conversation?.contactName || null;
+    showChat = true;
+  }
 
-    view = 'chat';
+  function closeChat() {
+    showChat = false;
+    selectedConversationId = null;
+    selectedContactName = null;
   }
 </script>
 
@@ -132,7 +166,7 @@
               {isNew ? 'New Campaign' : campaign?.name || 'Loading...'}
               {#if !isNew && campaign}
                 <span
-                  class={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${getStatusColor(campaign.status)}`}
+                  class={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider border ${getStatusColor(campaign.status)} ${campaign.status === 'processing' ? 'animate-pulse' : ''}`}
                 >
                   {campaign.status}
                 </span>
@@ -145,29 +179,21 @@
         {#if !isNew && campaign}
           <div class="flex items-center space-x-3">
             {#if campaign.status === 'pending'}
+              <!-- Premium Play Button -->
               <button
-                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-lg shadow-green-500/30 text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all"
+                class="group relative inline-flex items-center px-5 py-2.5 overflow-hidden rounded-xl text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                style="background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);"
                 on:click={handleExecute}
                 disabled={$isLoading}
               >
-                <svg
-                  class="-ml-1 mr-2 h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
+                <!-- Animated shine effect -->
+                <span class="absolute inset-0 overflow-hidden rounded-xl">
+                  <span
+                    class="absolute -left-full top-0 h-full w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 group-hover:animate-shine"
+                  ></span>
+                </span>
+                <svg class="-ml-0.5 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
                 </svg>
                 Run Campaign
               </button>
@@ -175,87 +201,129 @@
           </div>
         {/if}
       </div>
-    </div>
-  </div>
 
-  <!-- Main Content (Side-by-Side) -->
-  <div class="flex-1 flex overflow-hidden">
-    <!-- Left: Campaign Details OR Chat -->
-    <div class="flex-1 overflow-hidden flex flex-col relative">
-      {#if view === 'details'}
-        <div class="flex-1 overflow-y-auto p-6 lg:p-8">
-          <div class="max-w-3xl mx-auto">
-            {#if !isNew && campaign}
-              <!-- Stats Grid -->
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div
-                  class="bg-white p-5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
-                >
-                  <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                    Recipients
-                  </p>
-                  <p class="text-2xl font-bold text-gray-900">{campaign.total_recipients}</p>
-                </div>
-                <div
-                  class="bg-white p-5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
-                >
-                  <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Sent</p>
-                  <p class="text-2xl font-bold text-blue-600">{campaign.total_sent}</p>
-                </div>
-                <div
-                  class="bg-white p-5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
-                >
-                  <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                    Delivered
-                  </p>
-                  <p class="text-2xl font-bold text-green-600">{campaign.total_delivered || 0}</p>
-                </div>
-                <div
-                  class="bg-white p-5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
-                >
-                  <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                    Failed
-                  </p>
-                  <p class="text-2xl font-bold text-red-600">{campaign.total_failed}</p>
-                </div>
-              </div>
-            {/if}
-
-            <!-- Form -->
-            <CampaignForm {campaign} isLoading={$isLoading} on:submit={handleSubmit} />
-          </div>
-        </div>
-      {:else if view === 'chat' && selectedConversationId}
-        <div class="flex-1 flex flex-col h-full relative">
-          <!-- Back Button Overlay -->
-          <div class="absolute top-3 right-4 z-10">
+      <!-- Tab Navigation (only for existing campaigns) -->
+      {#if !isNew}
+        <div class="flex space-x-1 -mb-px">
+          {#each [{ id: 'details', label: 'Details & Insights', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' }, { id: 'conversations', label: 'Conversations', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' }] as tab}
             <button
-              class="bg-white/90 backdrop-blur shadow-sm border border-gray-200 text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors"
-              on:click={() => (view = 'details')}
+              class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors {activeTab ===
+              tab.id
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
+              on:click={() => setTab(tab.id)}
             >
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                ><path
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                /></svg
-              >
-              Close Chat
+                  d={tab.icon}
+                />
+              </svg>
+              {tab.label}
             </button>
-          </div>
-          <CampaignChatWindow
-            conversationId={selectedConversationId}
-            contactName={selectedContactName}
-            brandId={campaign?.target_brand_id}
-          />
+          {/each}
         </div>
       {/if}
     </div>
+  </div>
 
-    <!-- Right: Conversations (Only if not new) -->
-    {#if !isNew}
-      <div class="w-96 border-l border-gray-200 bg-white flex-shrink-0">
+  <!-- Main Content -->
+  <div class="flex-1 overflow-hidden">
+    {#if showChat && selectedConversationId}
+      <!-- Chat View (Full Width Overlay) -->
+      <div class="h-full flex flex-col relative">
+        <div class="absolute top-3 right-4 z-10">
+          <button
+            class="bg-white/90 backdrop-blur shadow-sm border border-gray-200 text-gray-600 hover:text-gray-900 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors"
+            on:click={closeChat}
+          >
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+            Close Chat
+          </button>
+        </div>
+        <CampaignChatWindow
+          conversationId={selectedConversationId}
+          contactName={selectedContactName}
+          brandId={campaign?.target_brand_id}
+        />
+      </div>
+    {:else if activeTab === 'details'}
+      <!-- Details Tab -->
+      <div class="h-full overflow-y-auto p-6 lg:p-8">
+        <div class="max-w-3xl mx-auto">
+          {#if !isNew && campaign}
+            <!-- Quick Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div
+                class="bg-white p-5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
+              >
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Recipients
+                </p>
+                <p class="text-2xl font-bold text-gray-900">{campaign.total_recipients}</p>
+              </div>
+              <div
+                class="bg-white p-5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
+              >
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Sent</p>
+                <p class="text-2xl font-bold text-blue-600">{campaign.total_sent}</p>
+              </div>
+              <div
+                class="bg-white p-5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
+              >
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                  Delivered
+                </p>
+                <p class="text-2xl font-bold text-green-600">{campaign.total_delivered || 0}</p>
+              </div>
+              <div
+                class="bg-white p-5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
+              >
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Failed</p>
+                <p class="text-2xl font-bold text-red-600">{campaign.total_failed}</p>
+              </div>
+            </div>
+
+            <!-- Insights Panel (for completed campaigns) -->
+            {#if campaign.status !== 'pending'}
+              <div class="mb-8">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <svg
+                    class="w-5 h-5 text-purple-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                  Campaign Insights
+                </h3>
+                <CampaignInsightsPanel insights={$currentInsights} isLoading={$isLoadingInsights} />
+              </div>
+            {/if}
+          {/if}
+
+          <!-- Form -->
+          <CampaignForm {campaign} isLoading={$isLoading} on:submit={handleSubmit} />
+        </div>
+      </div>
+    {:else if activeTab === 'conversations'}
+      <!-- Conversations Tab -->
+      <div class="h-full">
         <ConversationList
           mode="campaign"
           customConversations={conversations}
@@ -268,3 +336,14 @@
     {/if}
   </div>
 </div>
+
+<style>
+  @keyframes shine {
+    to {
+      left: 100%;
+    }
+  }
+  :global(.group:hover .animate-shine) {
+    animation: shine 0.75s ease-in-out;
+  }
+</style>
