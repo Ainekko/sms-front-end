@@ -47,6 +47,10 @@ export interface ConversationResponse {
     last_message: Message;
     /** Total number of messages in this conversation */
     message_count: number;
+    /** AI priority level (0-3). null if not analyzed */
+    ai_priority?: number | null;
+    /** AI do-not-contact flag */
+    ai_do_not_contact?: boolean;
 }
 
 // =============================================================================

@@ -33,6 +33,10 @@
   import ContactsPanel from '$lib/components/ContactsPanel.svelte';
   import NewConversationModal from '$lib/components/NewConversationModal.svelte';
 
+  // AI Components
+  import DNCListPanel from '$lib/components/ai/DNCListPanel.svelte';
+  import HotLeadsPanel from '$lib/components/ai/HotLeadsPanel.svelte';
+
   // Import services and stores
   import { webSocketService } from '$lib/services/websocket';
   import { loadConversations, selectConversation } from '$lib/stores/conversationsStore';
@@ -95,6 +99,15 @@
 
   /** Pre-filled contact name for new conversation */
   let newConversationName: string | null = null;
+
+  /** Active conversation folder filter */
+  let conversationFilter: 'all' | 'unread' | 'hot' | 'dnc' | 'archived' = 'all';
+
+  /** Whether DNC panel is open */
+  let showDNCPanel = false;
+
+  /** Whether Hot Leads panel is open */
+  let showHotLeadsPanel = false;
 
   // ==========================================================================
   // Event Handlers
@@ -230,6 +243,14 @@
     on:openBrandManager={handleOpenBrandManager}
     on:openBulkMessage={() => (showBulkMessage = true)}
     on:openContacts={() => (showContacts = true)}
+    on:openHotLeads={() => {
+      conversationFilter = 'hot';
+      showHotLeadsPanel = true;
+    }}
+    on:openDNCList={() => {
+      conversationFilter = 'dnc';
+      showDNCPanel = true;
+    }}
     on:logout={handleLogout}
     on:navigateAdmin={handleNavigateAdmin}
     on:navigateGroups={handleNavigateGroups}
@@ -240,11 +261,12 @@
   <div class="flex flex-1 overflow-hidden">
     <!-- 
             Sidebar: Conversation List
-            Hidden on mobile (md:block), always visible on desktop
+            Fixed width, hidden on mobile
         -->
-    <aside class="hidden md:block h-full">
+    <aside class="hidden md:flex w-80 flex-shrink-0 h-full">
       <ConversationList
         {brandId}
+        bind:activeFolder={conversationFilter}
         on:newMessage={() => {
           newConversationPhone = '';
           newConversationName = null;
@@ -290,6 +312,31 @@
   initialContactName={newConversationName}
   on:close={() => (showNewConversation = false)}
   on:sent={handleMessageSent}
+/>
+
+<!-- AI Panels -->
+<DNCListPanel
+  isOpen={showDNCPanel}
+  on:close={() => (showDNCPanel = false)}
+  on:viewContact={(e) => {
+    showDNCPanel = false;
+    conversationFilter = 'dnc';
+  }}
+/>
+
+<HotLeadsPanel
+  isOpen={showHotLeadsPanel}
+  on:close={() => (showHotLeadsPanel = false)}
+  on:viewContact={(e) => {
+    showHotLeadsPanel = false;
+    conversationFilter = 'hot';
+  }}
+  on:sendMessage={(e) => {
+    newConversationPhone = e.detail.phoneNumber;
+    newConversationName = e.detail.contactName;
+    showHotLeadsPanel = false;
+    showNewConversation = true;
+  }}
 />
 
 <style>

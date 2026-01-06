@@ -26,11 +26,13 @@
   /** Optional: Loading state (for Campaigns mode) */
   export let isLoading: boolean = false;
 
+  /** Active folder filter - can be bound from parent */
+  export let activeFolder: 'all' | 'unread' | 'hot' | 'dnc' | 'archived' = 'all';
+
   // ==========================================================================
   // Internal State
   // ==========================================================================
 
-  let activeFolder: 'all' | 'unread' | 'archived' = 'all';
   let searchQuery = '';
   const dispatch = createEventDispatcher();
 
@@ -71,15 +73,34 @@
 
     return uniqueConversations.filter((c: any) => {
       // In campaign mode, we might have different field names or need to adapt
-      // Default to false if undefined, as campaign conversations might not have this field populated yet
       const isArchived = c.contact?.is_archived || c.isArchived || false;
+      const isDNC = c.ai_do_not_contact === true;
+      const aiPriority = c.ai_priority ?? null;
+      const isHot = aiPriority === 3;
 
       // Folder filtering
-      if (activeFolder === 'archived' && !isArchived) return false;
-      if (activeFolder !== 'archived' && isArchived) return false;
+      if (activeFolder === 'archived') {
+        return isArchived;
+      }
+
+      // Hide archived from non-archived folders
+      if (isArchived) return false;
+
+      // DNC folder - show only DNC contacts
+      if (activeFolder === 'dnc') {
+        return isDNC;
+      }
+
+      // Hot folder - show priority 3 contacts
+      if (activeFolder === 'hot') {
+        return isHot && !isDNC;
+      }
+
+      // All/Unread - hide DNC contacts
+      if (isDNC) return false;
 
       if (activeFolder === 'unread') {
-        const direction = c.lastMessageDirection || c.last_message_direction;
+        const direction = c.lastMessageDirection || c.last_message?.direction;
         const count = c.unreadCount || c.unread_count || 0;
         if (count === 0 && direction !== 'inbound') return false;
       }
@@ -276,19 +297,36 @@
       </svg>
     </div>
 
-    <!-- Folders -->
-    <div class="flex space-x-1 bg-gray-100 p-1 rounded-xl mb-3">
-      {#each ['all', 'unread', 'archived'] as folder}
-        <button
-          class="flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize {activeFolder ===
-          folder
-            ? 'bg-white text-gray-900 shadow-sm'
-            : 'text-gray-500 hover:text-gray-700'}"
-          on:click={() => (activeFolder = folder)}
-        >
-          {folder}
-        </button>
-      {/each}
+    <!-- Folders - Stacked Rows -->
+    <div class="space-y-1 mb-3">
+      <!-- Row 1: Primary filters -->
+      <div class="flex space-x-1 bg-zinc-100 p-1 rounded-lg">
+        {#each ['all', 'unread', 'hot'] as folder}
+          <button
+            class="flex-1 py-1.5 text-xs font-medium rounded-md transition-all capitalize {activeFolder ===
+            folder
+              ? 'bg-white text-zinc-900 shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-700'}"
+            on:click={() => (activeFolder = folder)}
+          >
+            {folder}
+          </button>
+        {/each}
+      </div>
+      <!-- Row 2: AI + Archive -->
+      <div class="flex space-x-1 bg-zinc-100 p-1 rounded-lg">
+        {#each ['dnc', 'archived'] as folder}
+          <button
+            class="flex-1 py-1.5 text-xs font-medium rounded-md transition-all capitalize {activeFolder ===
+            folder
+              ? 'bg-white text-zinc-900 shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-700'}"
+            on:click={() => (activeFolder = folder)}
+          >
+            {folder}
+          </button>
+        {/each}
+      </div>
     </div>
 
     <!-- New Message Button (Only in Default Mode) -->

@@ -295,10 +295,11 @@
     </div>
 
     <!-- AI Insights -->
-    {#if insights.ai_summary}
+    {#if insights.ai_summary || insights.top_objections?.length || insights.top_interests?.length}
       <div
-        class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-indigo-100 p-6"
+        class="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl border border-indigo-100 p-6 space-y-5"
       >
+        <!-- Header -->
         <div class="flex items-start gap-4">
           <div
             class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0"
@@ -312,13 +313,110 @@
               />
             </svg>
           </div>
-          <div>
+          <div class="flex-1">
             <h3 class="text-sm font-bold text-indigo-900 uppercase tracking-wider mb-2">
               AI Insights
             </h3>
-            <p class="text-sm text-gray-700 leading-relaxed">{insights.ai_summary}</p>
+            {#if insights.ai_summary}
+              <p class="text-sm text-gray-700 leading-relaxed">{insights.ai_summary}</p>
+            {/if}
           </div>
+
+          <!-- Sentiment Score Badge -->
+          {#if insights.ai_sentiment_score !== null}
+            <div class="flex flex-col items-center">
+              <div
+                class="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white"
+              >
+                <span class="text-lg font-bold"
+                  >{(insights.ai_sentiment_score * 100).toFixed(0)}</span
+                >
+              </div>
+              <span class="text-xs text-purple-600 mt-1 font-medium">Sentiment</span>
+            </div>
+          {/if}
         </div>
+
+        <!-- Objections & Interests Grid -->
+        {#if insights.top_objections?.length || insights.top_interests?.length}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-indigo-100">
+            <!-- Top Objections -->
+            {#if insights.top_objections?.length}
+              <div class="bg-red-50/50 rounded-xl p-4 border border-red-100">
+                <h4
+                  class="text-xs font-bold text-red-700 uppercase tracking-wider mb-3 flex items-center gap-2"
+                >
+                  <span>⚠️</span> Top Objections
+                </h4>
+                <ul class="space-y-2">
+                  {#each insights.top_objections as objection}
+                    <li class="text-sm text-red-800 flex items-start gap-2">
+                      <span class="text-red-400 mt-1">•</span>
+                      <span>{objection}</span>
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+
+            <!-- Top Interests -->
+            {#if insights.top_interests?.length}
+              <div class="bg-green-50/50 rounded-xl p-4 border border-green-100">
+                <h4
+                  class="text-xs font-bold text-green-700 uppercase tracking-wider mb-3 flex items-center gap-2"
+                >
+                  <span>💡</span> Top Interests
+                </h4>
+                <ul class="space-y-2">
+                  {#each insights.top_interests as interest}
+                    <li class="text-sm text-green-800 flex items-start gap-2">
+                      <span class="text-green-400 mt-1">•</span>
+                      <span>{interest}</span>
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+          </div>
+        {/if}
+
+        <!-- Recommendations -->
+        {#if insights.recommendations?.length}
+          <div class="bg-blue-50/50 rounded-xl p-4 border border-blue-100">
+            <h4
+              class="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3 flex items-center gap-2"
+            >
+              <span>🎯</span> AI Recommendations
+            </h4>
+            <ul class="space-y-2">
+              {#each insights.recommendations as rec}
+                <li class="text-sm text-blue-800 flex items-start gap-2">
+                  <span class="text-blue-400 mt-1">→</span>
+                  <span>{rec}</span>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+
+        <!-- Priority Breakdown -->
+        {#if insights.priority_breakdown && Object.keys(insights.priority_breakdown).length > 0}
+          <div class="pt-4 border-t border-indigo-100">
+            <h4 class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3">
+              Contact Priority Breakdown
+            </h4>
+            <div class="flex gap-2 flex-wrap">
+              {#each Object.entries(insights.priority_breakdown) as [priority, count]}
+                <div
+                  class="px-3 py-2 rounded-lg bg-white border border-indigo-200 text-center min-w-[60px]"
+                >
+                  <span class="text-lg font-bold text-indigo-600">{count}</span>
+                  <span class="text-xs text-gray-500 block">P{priority}</span>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
     {/if}
 

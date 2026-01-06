@@ -68,10 +68,16 @@ export interface CampaignInsightsResponse {
     reply_rate: number; // 0.0 - 1.0
     avg_response_time_mins: number | null;
 
-    // AI-ready fields (reserved for future)
+    // AI fields
     ai_summary: string | null;
     ai_sentiment_score: number | null;
     ai_insights_json: string | null;
+
+    // Extended AI fields (from AI router)
+    top_objections?: string[];
+    top_interests?: string[];
+    recommendations?: string[];
+    priority_breakdown?: Record<string, number>;
 }
 
 // =============================================================================
