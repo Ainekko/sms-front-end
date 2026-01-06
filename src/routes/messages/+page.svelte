@@ -332,10 +332,13 @@
     conversationFilter = 'hot';
   }}
   on:sendMessage={(e) => {
-    newConversationPhone = e.detail.phoneNumber;
-    newConversationName = e.detail.contactName;
+    // Select the conversation directly
+    selectConversation(e.detail.phoneNumber);
     showHotLeadsPanel = false;
-    showNewConversation = true;
+    // Ensure we're on a tab where this conversation is visible (hot or all)
+    if (conversationFilter !== 'hot' && conversationFilter !== 'all') {
+      conversationFilter = 'all';
+    }
   }}
 />
 

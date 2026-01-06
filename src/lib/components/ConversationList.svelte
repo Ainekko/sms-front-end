@@ -71,12 +71,30 @@
       console.log('Unique Conversations:', uniqueConversations);
     }
 
-    return uniqueConversations.filter((c: any) => {
+    console.log('[ConversationList] Raw conversations count:', uniqueConversations.length);
+    if (uniqueConversations.length > 0) {
+      console.log('[ConversationList] First raw item:', uniqueConversations[0]);
+    }
+
+    // DEBUG: Log first conversation to check structure
+    if (uniqueConversations.length > 0) {
+      console.log('[ConversationList] First conversation sample:', uniqueConversations[0]);
+      console.log('[ConversationList] Active Folder:', activeFolder);
+    }
+
+    return uniqueConversations.filter((c: any, index: number) => {
       // In campaign mode, we might have different field names or need to adapt
       const isArchived = c.contact?.is_archived || c.isArchived || false;
-      const isDNC = c.ai_do_not_contact === true;
-      const aiPriority = c.ai_priority ?? null;
+      const isDNC = c.aiDoNotContact === true || c.ai_do_not_contact === true;
+      const aiPriority = c.aiPriority ?? c.ai_priority ?? null;
       const isHot = aiPriority === 3;
+
+      // DEBUG: Log filter decision for first item only
+      if (index === 0) {
+        console.log(
+          `[Filter:${activeFolder}] Checking first item ${c.phoneNumber}: DNC=${isDNC}, Priority=${aiPriority}, Hot=${isHot}`
+        );
+      }
 
       // Folder filtering
       if (activeFolder === 'archived') {

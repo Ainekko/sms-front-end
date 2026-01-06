@@ -59,6 +59,12 @@ export interface ConversationSummary {
 
     /** Number of unread messages (for future use) */
     unreadCount: number;
+
+    /** AI priority level (0-3). null if not analyzed */
+    aiPriority?: number | null;
+
+    /** AI do-not-contact flag */
+    aiDoNotContact?: boolean;
 }
 
 /**
@@ -308,8 +314,14 @@ export async function loadConversations(brandId?: string): Promise<void> {
             lastMessageDirection: item.last_message?.direction || 'outbound',
             lastMessageAt: new Date(item.last_message?.created_at || Date.now()),
             messageCount: item.message_count || 0,
-            unreadCount: 0 // TODO: Track unread on backend
+            unreadCount: 0, // TODO: Track unread on backend
+            aiPriority: item.ai_priority,
+            aiDoNotContact: item.ai_do_not_contact
         }));
+
+        if (conversations.length > 0) {
+            console.log('[ConversationsStore] Mapped first item:', conversations[0]);
+        }
 
         conversationsStore.setConversations(conversations);
     } catch (error) {
