@@ -4,6 +4,7 @@
   import { goto } from '$app/navigation';
   import { campaignsStore, loadCampaigns, isLoading } from '$lib/stores/campaignsStore';
   import CampaignCard from '$lib/components/campaigns/CampaignCard.svelte';
+  import FollowUpCampaignModal from '$lib/components/campaigns/FollowUpCampaignModal.svelte';
   import type { CampaignResponse } from '$lib/api/campaigns';
 
   // URL-based status filter
@@ -16,6 +17,10 @@
       ? allCampaigns
       : allCampaigns.filter((c: CampaignResponse) => c.status === urlStatus);
 
+  // Follow-up modal state
+  let showFollowUpModal = false;
+  let selectedParentCampaign: CampaignResponse | null = null;
+
   function setStatusFilter(status: StatusFilter) {
     const url = new URL($page.url);
     if (status === 'all') {
@@ -24,6 +29,23 @@
       url.searchParams.set('status', status);
     }
     goto(url.toString(), { replaceState: true, keepFocus: true });
+  }
+
+  function handleFollowUp(event: CustomEvent<CampaignResponse>) {
+    selectedParentCampaign = event.detail;
+    showFollowUpModal = true;
+  }
+
+  function closeFollowUpModal() {
+    showFollowUpModal = false;
+    selectedParentCampaign = null;
+  }
+
+  async function handleFollowUpCreated(event: CustomEvent<CampaignResponse>) {
+    // Reload campaigns to show the new follow-up
+    await loadCampaigns();
+    // Navigate to the new campaign
+    goto(`/campaigns/${event.detail.id}`);
   }
 
   onMount(async () => {
@@ -150,9 +172,19 @@
     {:else}
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {#each campaigns as campaign (campaign.id)}
-          <CampaignCard {campaign} />
+          <CampaignCard {campaign} on:followup={handleFollowUp} />
         {/each}
       </div>
     {/if}
   </main>
 </div>
+
+<!-- Follow-up Campaign Modal -->
+{#if showFollowUpModal && selectedParentCampaign}
+  <FollowUpCampaignModal
+    parentCampaign={selectedParentCampaign}
+    isOpen={showFollowUpModal}
+    on:close={closeFollowUpModal}
+    on:created={handleFollowUpCreated}
+  />
+{/if}

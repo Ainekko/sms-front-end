@@ -13,6 +13,14 @@ import { api } from './base';
 export type CampaignStatus = 'pending' | 'processing' | 'completed' | 'cancelled' | 'failed';
 export type TargetType = 'brand' | 'group' | 'contacts';
 
+// Follow-up campaign exclusion filters
+export interface ExclusionFilters {
+    exclude_dnc: boolean;
+    exclude_no_reply: boolean;
+    exclude_priority_below?: number | null;
+    excluded_count: number;
+}
+
 export interface CampaignResponse {
     id: string;
     name: string;
@@ -34,6 +42,12 @@ export interface CampaignResponse {
     target_group_name?: string;
     target_brand_name?: string;
     target_contact_name?: string;
+
+    // Follow-up campaign fields
+    parent_campaign_id?: string | null;
+    parent_campaign_name?: string | null;
+    child_campaign_ids?: string[];
+    exclusion_filters?: ExclusionFilters;
 }
 
 export interface CreateCampaignRequest {
@@ -49,6 +63,12 @@ export interface CreateCampaignRequest {
 
 export interface ExecuteCampaignResponse {
     status: string;
+}
+
+export interface UpdateCampaignRequest {
+    name?: string;
+    message_body?: string;
+    scheduled_at?: string | null;
 }
 
 export interface CampaignInsightsResponse {
@@ -115,6 +135,31 @@ export async function executeCampaign(id: string): Promise<ExecuteCampaignRespon
 }
 
 /**
+ * Update a pending campaign.
+ * Only campaigns with status 'pending' can be updated.
+ */
+export async function updateCampaign(id: string, data: UpdateCampaignRequest): Promise<CampaignResponse> {
+    return api.patch<CampaignResponse>(`/campaigns/${id}`, data);
+}
+
+/**
+ * Cancel a pending campaign.
+ * Only campaigns with status 'pending' can be cancelled.
+ */
+export async function cancelCampaign(id: string): Promise<CampaignResponse> {
+    return api.post<CampaignResponse>(`/campaigns/${id}/cancel`, {});
+}
+
+/**
+ * Delete a pending or cancelled campaign.
+ * Only campaigns with status 'pending' or 'cancelled' can be deleted.
+ * Completed or processing campaigns are retained for audit purposes.
+ */
+export async function deleteCampaign(id: string): Promise<void> {
+    return api.delete(`/campaigns/${id}`);
+}
+
+/**
  * Get conversations for a campaign.
  */
 export async function getCampaignConversations(id: string): Promise<any[]> {
@@ -128,6 +173,59 @@ export async function getCampaignInsights(id: string): Promise<CampaignInsightsR
     return api.get<CampaignInsightsResponse>(`/campaigns/${id}/insights`);
 }
 
+// =============================================================================
+// Follow-up Campaign Types & Functions
+// =============================================================================
+
+export interface CreateFollowUpCampaignRequest {
+    parent_campaign_id: string;
+    name?: string;
+    message_body: string;
+    scheduled_at?: string | null;
+    exclude_dnc: boolean;
+    exclude_no_reply: boolean;
+    exclude_priority_below?: number | null;
+}
+
+export interface FollowUpPreviewResponse {
+    parent_campaign_id: string;
+    parent_campaign_name: string;
+    original_recipients: number;
+    dnc_count: number;
+    no_reply_count: number;
+    priority_breakdown: Record<string, number>;
+    remaining_after_exclusions: number;
+}
+
+/**
+ * Get a preview of follow-up campaign audience with exclusions.
+ */
+export async function getFollowUpPreview(
+    parentCampaignId: string,
+    excludeDnc: boolean = true,
+    excludeNoReply: boolean = false,
+    excludePriorityBelow?: number
+): Promise<FollowUpPreviewResponse> {
+    const params: Record<string, any> = {
+        exclude_dnc: excludeDnc,
+        exclude_no_reply: excludeNoReply
+    };
+    if (excludePriorityBelow !== undefined) {
+        params.exclude_priority_below = excludePriorityBelow;
+    }
+    return api.get<FollowUpPreviewResponse>(
+        `/campaigns/${parentCampaignId}/follow-up/preview`,
+        { params }
+    );
+}
+
+/**
+ * Create a follow-up campaign with exclusions.
+ */
+export async function createFollowUpCampaign(data: CreateFollowUpCampaignRequest): Promise<CampaignResponse> {
+    return api.post<CampaignResponse>(`/campaigns/${data.parent_campaign_id}/follow-up`, data);
+}
+
 /**
  * Campaigns API object.
  */
@@ -136,6 +234,12 @@ export const campaignsApi = {
     getCampaign,
     createCampaign,
     executeCampaign,
+    updateCampaign,
+    cancelCampaign,
+    deleteCampaign,
     getCampaignConversations,
-    getCampaignInsights
+    getCampaignInsights,
+    getFollowUpPreview,
+    createFollowUpCampaign
 };
+

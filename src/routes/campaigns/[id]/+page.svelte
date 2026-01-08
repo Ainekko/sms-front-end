@@ -7,6 +7,8 @@
     loadCampaign,
     createCampaign,
     executeCampaign,
+    cancelCampaign,
+    deleteCampaign,
     startPolling,
     stopPolling,
     loadCampaignConversations,
@@ -105,6 +107,31 @@
     }
   }
 
+  async function handleCancel() {
+    if (!campaign) return;
+    if (!confirm('Are you sure you want to cancel this campaign?')) return;
+
+    try {
+      await cancelCampaign(campaign.id);
+      showSuccess('Campaign cancelled');
+    } catch (error) {
+      showError('Failed to cancel campaign');
+    }
+  }
+
+  async function handleDelete() {
+    if (!campaign) return;
+    if (!confirm('Are you sure you want to delete this campaign? This cannot be undone.')) return;
+
+    try {
+      await deleteCampaign(campaign.id);
+      showSuccess('Campaign deleted');
+      goto('/campaigns');
+    } catch (error) {
+      showError('Failed to delete campaign');
+    }
+  }
+
   function getStatusColor(status: string) {
     switch (status) {
       case 'completed':
@@ -170,8 +197,31 @@
                 >
                   {campaign.status}
                 </span>
+                {#if campaign.parent_campaign_id}
+                  <span
+                    class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200"
+                  >
+                    Follow-up
+                  </span>
+                {/if}
               {/if}
             </h1>
+            {#if !isNew && campaign?.parent_campaign_id}
+              <a
+                href="/campaigns/{campaign.parent_campaign_id}"
+                class="text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1 mt-0.5 transition-colors"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 16l-4-4m0 0l4-4m-4 4h18"
+                  />
+                </svg>
+                Based on: {campaign.parent_campaign_name || 'Parent Campaign'}
+              </a>
+            {/if}
           </div>
         </div>
 
@@ -179,6 +229,38 @@
         {#if !isNew && campaign}
           <div class="flex items-center space-x-3">
             {#if campaign.status === 'pending'}
+              <!-- Cancel Button -->
+              <button
+                class="inline-flex items-center px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl border border-amber-200 transition-colors disabled:opacity-50"
+                on:click={handleCancel}
+                disabled={$isLoading}
+              >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                Cancel
+              </button>
+              <!-- Delete Button -->
+              <button
+                class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-xl border border-red-200 transition-colors disabled:opacity-50"
+                on:click={handleDelete}
+                disabled={$isLoading}
+              >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+                Delete
+              </button>
               <!-- Premium Play Button -->
               <button
                 class="group relative inline-flex items-center px-5 py-2.5 overflow-hidden rounded-xl text-white font-semibold transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
@@ -196,6 +278,23 @@
                   <path d="M8 5v14l11-7z" />
                 </svg>
                 Run Campaign
+              </button>
+            {:else if campaign.status === 'cancelled'}
+              <!-- Delete Button for cancelled -->
+              <button
+                class="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-xl border border-red-200 transition-colors disabled:opacity-50"
+                on:click={handleDelete}
+                disabled={$isLoading}
+              >
+                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+                Delete
               </button>
             {/if}
           </div>

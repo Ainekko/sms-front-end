@@ -2,13 +2,26 @@
   import type { CampaignResponse } from '$lib/api/campaigns';
   import { format } from 'date-fns';
   import { createEventDispatcher } from 'svelte';
-  import { executeCampaign, startPolling } from '$lib/stores/campaignsStore';
+  import {
+    executeCampaign,
+    cancelCampaign,
+    deleteCampaign,
+    startPolling,
+    loadCampaigns
+  } from '$lib/stores/campaignsStore';
   import { showSuccess, showError } from '$lib/stores/uiStore';
 
   export let campaign: CampaignResponse;
+  export let showFollowUpButton: boolean = true;
 
   const dispatch = createEventDispatcher();
   let isExecuting = false;
+  let isCancelling = false;
+  let isDeleting = false;
+
+  // Computed properties for follow-up display
+  $: isFollowUp = !!campaign.parent_campaign_id;
+  $: hasExclusions = campaign.exclusion_filters && campaign.exclusion_filters.excluded_count > 0;
 
   function getStatusColor(status: string) {
     switch (status) {
@@ -50,6 +63,46 @@
       isExecuting = false;
     }
   }
+
+  function handleFollowUp(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+    dispatch('followup', campaign);
+  }
+
+  async function handleCancel(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm('Are you sure you want to cancel this campaign?')) return;
+
+    isCancelling = true;
+    try {
+      await cancelCampaign(campaign.id);
+      showSuccess('Campaign cancelled');
+    } catch (error) {
+      showError('Failed to cancel campaign');
+    } finally {
+      isCancelling = false;
+    }
+  }
+
+  async function handleDelete(e: Event) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm('Are you sure you want to delete this campaign? This cannot be undone.')) return;
+
+    isDeleting = true;
+    try {
+      await deleteCampaign(campaign.id);
+      showSuccess('Campaign deleted');
+    } catch (error) {
+      showError('Failed to delete campaign');
+    } finally {
+      isDeleting = false;
+    }
+  }
 </script>
 
 <a
@@ -58,15 +111,44 @@
 >
   <!-- Status Badge -->
   <div class="flex justify-between items-start mb-4">
-    <span
-      class={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getStatusColor(campaign.status)}`}
-    >
-      {campaign.status}
-    </span>
+    <div class="flex items-center gap-2">
+      <span
+        class={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getStatusColor(campaign.status)}`}
+      >
+        {campaign.status}
+      </span>
+      {#if isFollowUp}
+        <span
+          class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200"
+        >
+          Follow-up
+        </span>
+      {/if}
+      {#if hasExclusions}
+        <span class="px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-50 text-gray-400">
+          -{campaign.exclusion_filters?.excluded_count} excluded
+        </span>
+      {/if}
+    </div>
     <span class="text-xs text-gray-400 font-medium">
       {campaign.scheduled_at ? format(new Date(campaign.scheduled_at), 'MMM d, HH:mm') : 'Draft'}
     </span>
   </div>
+
+  <!-- Parent Campaign Link (for follow-ups) -->
+  {#if isFollowUp && campaign.parent_campaign_name}
+    <div class="mb-2 text-xs text-gray-400 flex items-center gap-1">
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M7 16l-4-4m0 0l4-4m-4 4h18"
+        />
+      </svg>
+      Based on: {campaign.parent_campaign_name}
+    </div>
+  {/if}
 
   <!-- Title & Target -->
   <h3
@@ -105,15 +187,116 @@
       <span class="text-sm font-bold text-gray-900">{campaign.total_delivered || 0}</span>
     </div>
     {#if campaign.status === 'pending'}
-      <!-- Play Button -->
+      <!-- Action buttons for pending campaigns -->
+      <div class="flex items-center gap-2">
+        <!-- Cancel Button -->
+        <button
+          class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-amber-100 text-gray-500 hover:text-amber-600 transition-colors disabled:opacity-50"
+          on:click={handleCancel}
+          disabled={isCancelling}
+          title="Cancel Campaign"
+        >
+          {#if isCancelling}
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          {:else}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          {/if}
+        </button>
+        <!-- Delete Button -->
+        <button
+          class="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
+          on:click={handleDelete}
+          disabled={isDeleting}
+          title="Delete Campaign"
+        >
+          {#if isDeleting}
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          {:else}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+          {/if}
+        </button>
+        <!-- Play Button -->
+        <button
+          class="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 text-white shadow-lg shadow-green-500/30 hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+          on:click={handleExecute}
+          disabled={isExecuting}
+          title="Run Campaign"
+        >
+          {#if isExecuting}
+            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          {:else}
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          {/if}
+        </button>
+      </div>
+    {:else if campaign.status === 'cancelled'}
+      <!-- Delete button for cancelled campaigns -->
       <button
-        class="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 text-white shadow-lg shadow-green-500/30 hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-        on:click={handleExecute}
-        disabled={isExecuting}
-        title="Run Campaign"
+        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 transition-colors disabled:opacity-50"
+        on:click={handleDelete}
+        disabled={isDeleting}
+        title="Delete Campaign"
       >
-        {#if isExecuting}
-          <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        {#if isDeleting}
+          <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
             ></circle>
             <path
@@ -123,10 +306,33 @@
             ></path>
           </svg>
         {:else}
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M8 5v14l11-7z" />
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+            />
           </svg>
         {/if}
+        Delete
+      </button>
+    {:else if campaign.status === 'completed' && showFollowUpButton}
+      <!-- Follow-up Button -->
+      <button
+        class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-200 transition-colors"
+        on:click={handleFollowUp}
+        title="Create Follow-up Campaign"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 4v16m8-8H4"
+          />
+        </svg>
+        Follow-up
       </button>
     {:else}
       <div class="flex flex-col items-end">

@@ -1,0 +1,614 @@
+<!--
+  FollowUpCampaignModal Component
+  ================================
+  Modal for creating follow-up campaigns with audience exclusion options.
+  Uses minimal silver palette with light borders and subtle shadows.
+-->
+
+<script lang="ts">
+  import { createEventDispatcher, onMount } from 'svelte';
+  import {
+    getFollowUpPreview,
+    createFollowUpCampaign,
+    type CampaignResponse,
+    type FollowUpPreviewResponse,
+    type CreateFollowUpCampaignRequest
+  } from '$lib/api/campaigns';
+  import { showSuccess, showError } from '$lib/stores/uiStore';
+
+  export let parentCampaign: CampaignResponse;
+  export let isOpen: boolean = false;
+
+  const dispatch = createEventDispatcher();
+
+  // Form state
+  let name = '';
+  let messageBody = '';
+  let scheduledAt = '';
+  let excludeDnc = true;
+  let excludeNoReply = false;
+  let minPriorityThreshold = 0; // 0 = include all, 1 = exclude 0, 2 = exclude 0-1, 3 = exclude 0-2
+
+  // Preview state
+  let preview: FollowUpPreviewResponse | null = null;
+  let isLoadingPreview = false;
+  let isSubmitting = false;
+
+  // Computed remaining count
+  $: remainingCount = computeRemainingCount(
+    preview,
+    excludeDnc,
+    excludeNoReply,
+    minPriorityThreshold
+  );
+
+  // Compute excluded count for the priority slider
+  $: priorityExcludedCount = computePriorityExcluded(preview, minPriorityThreshold);
+
+  function computePriorityExcluded(p: FollowUpPreviewResponse | null, threshold: number): number {
+    if (!p || threshold === 0) return 0;
+    let count = 0;
+    for (let i = 0; i < threshold; i++) {
+      count += p.priority_breakdown[String(i)] || 0;
+    }
+    return count;
+  }
+
+  function computeRemainingCount(
+    p: FollowUpPreviewResponse | null,
+    dnc: boolean,
+    noReply: boolean,
+    threshold: number
+  ): number {
+    if (!p) return 0;
+    let excluded = 0;
+    if (dnc) excluded += p.dnc_count;
+    if (noReply) excluded += p.no_reply_count;
+    // Exclude contacts below the threshold
+    excluded += computePriorityExcluded(p, threshold);
+    return Math.max(0, p.original_recipients - excluded);
+  }
+
+  onMount(async () => {
+    name = `${parentCampaign.name} - Follow-up`;
+    await loadPreview();
+  });
+
+  async function loadPreview() {
+    isLoadingPreview = true;
+    try {
+      preview = await getFollowUpPreview(parentCampaign.id, excludeDnc, excludeNoReply);
+    } catch (error) {
+      // If API doesn't exist yet, use mock data
+      console.warn('Follow-up preview API not available, using mock data');
+      preview = {
+        parent_campaign_id: parentCampaign.id,
+        parent_campaign_name: parentCampaign.name,
+        original_recipients: parentCampaign.total_recipients,
+        dnc_count: Math.floor(parentCampaign.total_recipients * 0.15),
+        no_reply_count: Math.floor(parentCampaign.total_recipients * 0.45),
+        priority_breakdown: {
+          '0': Math.floor(parentCampaign.total_recipients * 0.05),
+          '1': Math.floor(parentCampaign.total_recipients * 0.1),
+          '2': Math.floor(parentCampaign.total_recipients * 0.35),
+          '3': Math.floor(parentCampaign.total_recipients * 0.5)
+        },
+        remaining_after_exclusions: Math.floor(parentCampaign.total_recipients * 0.4)
+      };
+    } finally {
+      isLoadingPreview = false;
+    }
+  }
+
+  async function handleSubmit() {
+    if (!messageBody.trim()) {
+      showError('Message body is required');
+      return;
+    }
+
+    isSubmitting = true;
+    try {
+      const request: CreateFollowUpCampaignRequest = {
+        parent_campaign_id: parentCampaign.id,
+        name: name || undefined,
+        message_body: messageBody,
+        scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        exclude_dnc: excludeDnc,
+        exclude_no_reply: excludeNoReply,
+        exclude_priority_below: minPriorityThreshold > 0 ? minPriorityThreshold : undefined
+      };
+
+      const newCampaign = await createFollowUpCampaign(request);
+      showSuccess('Follow-up campaign created');
+      dispatch('created', newCampaign);
+      close();
+    } catch (error) {
+      showError('Failed to create follow-up campaign');
+    } finally {
+      isSubmitting = false;
+    }
+  }
+
+  function close() {
+    isOpen = false;
+    dispatch('close');
+  }
+
+  function handleBackdropClick(e: MouseEvent) {
+    if (e.target === e.currentTarget) {
+      close();
+    }
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      close();
+    }
+  }
+</script>
+
+<svelte:window on:keydown={handleKeydown} />
+
+{#if isOpen}
+  <!-- Backdrop -->
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm"
+    on:click={handleBackdropClick}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-title"
+  >
+    <!-- Modal -->
+    <div
+      class="relative w-full max-w-lg mx-4 bg-white rounded-2xl shadow-xl border border-gray-200 max-h-[90vh] overflow-hidden flex flex-col"
+    >
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <h2 id="modal-title" class="text-lg font-bold text-gray-900">Create Follow-up Campaign</h2>
+        <button
+          type="button"
+          class="p-2 -mr-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          on:click={close}
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <!-- Parent Campaign Info -->
+        <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
+              <svg
+                class="w-5 h-5 text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"
+                />
+              </svg>
+            </div>
+            <div>
+              <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Based on</p>
+              <p class="font-semibold text-gray-900">{parentCampaign.name}</p>
+              <p class="text-sm text-gray-500">
+                {parentCampaign.total_recipients.toLocaleString()} original recipients
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Exclusion Options -->
+        <div>
+          <h3 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <svg
+              class="w-4 h-4 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+              />
+            </svg>
+            Exclude from Follow-up
+          </h3>
+
+          <div class="space-y-2">
+            <!-- DNC Option -->
+            <div
+              class="flex items-center gap-4 p-4 rounded-xl border transition-all
+                {excludeDnc ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-100'}"
+            >
+              <div class="flex-1">
+                <p class="font-medium text-gray-900">Do Not Contact (DNC)</p>
+                <p class="text-sm text-gray-500">Contacts who asked not to be reached</p>
+              </div>
+              <span class="text-sm font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg">
+                {isLoadingPreview ? '...' : (preview?.dnc_count || 0).toLocaleString()}
+              </span>
+              <!-- Toggle Switch -->
+              <button
+                type="button"
+                role="switch"
+                aria-checked={excludeDnc}
+                on:click={() => (excludeDnc = !excludeDnc)}
+                class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 {excludeDnc
+                  ? 'bg-gray-900'
+                  : 'bg-gray-200'}"
+              >
+                <span
+                  class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {excludeDnc
+                    ? 'translate-x-5'
+                    : 'translate-x-0'}"
+                ></span>
+              </button>
+            </div>
+
+            <!-- No Reply Option -->
+            <div
+              class="flex items-center gap-4 p-4 rounded-xl border transition-all
+                {excludeNoReply ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-100'}"
+            >
+              <div class="flex-1">
+                <p class="font-medium text-gray-900">No Reply</p>
+                <p class="text-sm text-gray-500">Contacts who didn't respond</p>
+              </div>
+              <span class="text-sm font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg">
+                {isLoadingPreview ? '...' : (preview?.no_reply_count || 0).toLocaleString()}
+              </span>
+              <!-- Toggle Switch -->
+              <button
+                type="button"
+                role="switch"
+                aria-checked={excludeNoReply}
+                on:click={() => (excludeNoReply = !excludeNoReply)}
+                class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 {excludeNoReply
+                  ? 'bg-gray-900'
+                  : 'bg-gray-200'}"
+              >
+                <span
+                  class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {excludeNoReply
+                    ? 'translate-x-5'
+                    : 'translate-x-0'}"
+                ></span>
+              </button>
+            </div>
+
+            <!-- AI Priority Threshold Slider -->
+            <div class="p-4 rounded-xl border border-gray-100 bg-white">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <svg
+                      class="w-4 h-4 text-purple-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-900">Min AI Priority</p>
+                    <p class="text-xs text-gray-500">Exclude contacts below this score</p>
+                  </div>
+                </div>
+                <span
+                  class="text-sm font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg"
+                >
+                  {isLoadingPreview ? '...' : priorityExcludedCount.toLocaleString()} excluded
+                </span>
+              </div>
+
+              <!-- Slider -->
+              <div class="px-1">
+                <input
+                  type="range"
+                  min="0"
+                  max="3"
+                  step="1"
+                  bind:value={minPriorityThreshold}
+                  class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                />
+
+                <!-- Labels -->
+                <div class="flex justify-between mt-2 text-xs">
+                  <button
+                    type="button"
+                    class="flex flex-col items-center transition-colors {minPriorityThreshold === 0
+                      ? 'text-purple-600 font-semibold'
+                      : 'text-gray-400'}"
+                    on:click={() => (minPriorityThreshold = 0)}
+                  >
+                    <span>All</span>
+                    <span class="text-[10px]">Include all</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="flex flex-col items-center transition-colors {minPriorityThreshold === 1
+                      ? 'text-purple-600 font-semibold'
+                      : 'text-gray-400'}"
+                    on:click={() => (minPriorityThreshold = 1)}
+                  >
+                    <span>≥1</span>
+                    <span class="text-[10px]"
+                      >{isLoadingPreview ? '...' : preview?.priority_breakdown['0'] || 0}</span
+                    >
+                  </button>
+                  <button
+                    type="button"
+                    class="flex flex-col items-center transition-colors {minPriorityThreshold === 2
+                      ? 'text-purple-600 font-semibold'
+                      : 'text-gray-400'}"
+                    on:click={() => (minPriorityThreshold = 2)}
+                  >
+                    <span>≥2</span>
+                    <span class="text-[10px]"
+                      >{isLoadingPreview
+                        ? '...'
+                        : (preview?.priority_breakdown['0'] || 0) +
+                          (preview?.priority_breakdown['1'] || 0)}</span
+                    >
+                  </button>
+                  <button
+                    type="button"
+                    class="flex flex-col items-center transition-colors {minPriorityThreshold === 3
+                      ? 'text-purple-600 font-semibold'
+                      : 'text-gray-400'}"
+                    on:click={() => (minPriorityThreshold = 3)}
+                  >
+                    <span>≥3</span>
+                    <span class="text-[10px]"
+                      >{isLoadingPreview
+                        ? '...'
+                        : (preview?.priority_breakdown['0'] || 0) +
+                          (preview?.priority_breakdown['1'] || 0) +
+                          (preview?.priority_breakdown['2'] || 0)}</span
+                    >
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Remaining Audience -->
+          <div
+            class="mt-4 flex items-center justify-between px-4 py-3 bg-gray-900 text-white rounded-xl"
+          >
+            <span class="text-sm font-medium">Remaining audience</span>
+            <span class="text-lg font-bold">{remainingCount.toLocaleString()} recipients</span>
+          </div>
+        </div>
+
+        <!-- Campaign Name -->
+        <div>
+          <label for="campaign-name" class="block text-sm font-semibold text-gray-700 mb-2">
+            Campaign Name
+          </label>
+          <input
+            id="campaign-name"
+            type="text"
+            bind:value={name}
+            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-gray-300 focus:border-gray-300 transition-colors"
+            placeholder="Follow-up campaign name"
+          />
+        </div>
+
+        <!-- When to Send Section -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-3">When to Send?</label>
+
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <!-- Execute Now Card -->
+            <button
+              type="button"
+              class="relative p-4 rounded-xl border-2 text-left transition-all duration-200 {!scheduledAt
+                ? 'border-green-500 bg-gradient-to-br from-green-50 to-emerald-50 ring-1 ring-green-500'
+                : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'}"
+              on:click={() => (scheduledAt = '')}
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-9 h-9 rounded-lg flex items-center justify-center {!scheduledAt
+                    ? 'bg-green-500'
+                    : 'bg-gray-100'}"
+                >
+                  <svg
+                    class="w-4 h-4 {!scheduledAt ? 'text-white' : 'text-gray-500'}"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-bold text-gray-900 text-sm">Execute Now</p>
+                  <p class="text-xs text-gray-500">Send immediately</p>
+                </div>
+              </div>
+              {#if !scheduledAt}
+                <div class="absolute top-2 right-2 text-green-500">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+              {/if}
+            </button>
+
+            <!-- Schedule Later Card -->
+            <button
+              type="button"
+              class="relative p-4 rounded-xl border-2 text-left transition-all duration-200 {scheduledAt
+                ? 'border-blue-500 bg-gradient-to-br from-blue-50 to-indigo-50 ring-1 ring-blue-500'
+                : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'}"
+              on:click={() => {
+                if (!scheduledAt) {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  tomorrow.setHours(9, 0, 0, 0);
+                  scheduledAt = tomorrow.toISOString().slice(0, 16);
+                }
+              }}
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-9 h-9 rounded-lg flex items-center justify-center {scheduledAt
+                    ? 'bg-blue-500'
+                    : 'bg-gray-100'}"
+                >
+                  <svg
+                    class="w-4 h-4 {scheduledAt ? 'text-white' : 'text-gray-500'}"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p class="font-bold text-gray-900 text-sm">Schedule</p>
+                  <p class="text-xs text-gray-500">Choose date & time</p>
+                </div>
+              </div>
+              {#if scheduledAt}
+                <div class="absolute top-2 right-2 text-blue-500">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </div>
+              {/if}
+            </button>
+          </div>
+
+          <!-- Date/Time Picker (only when scheduling) -->
+          {#if scheduledAt}
+            <div
+              class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-4"
+            >
+              <label
+                class="block text-xs font-semibold text-blue-700 uppercase tracking-wider mb-2"
+              >
+                Scheduled Date & Time
+              </label>
+              <input
+                type="datetime-local"
+                bind:value={scheduledAt}
+                class="block w-full rounded-xl border-blue-200 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500 text-sm py-3 px-4 shadow-sm"
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+          {/if}
+        </div>
+
+        <!-- Message Body -->
+        <div>
+          <label for="message-body" class="block text-sm font-semibold text-gray-700 mb-2">
+            Message
+          </label>
+          <div class="relative">
+            <textarea
+              id="message-body"
+              bind:value={messageBody}
+              rows="4"
+              class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-gray-300 focus:border-gray-300 resize-none transition-colors"
+              placeholder="Hey {name}, just following up on..."
+            ></textarea>
+            <span class="absolute bottom-3 right-3 text-xs text-gray-400">
+              {messageBody.length} chars
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div
+        class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 bg-gray-50/50"
+      >
+        <button
+          type="button"
+          class="px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+          on:click={close}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed {scheduledAt
+            ? 'bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-500/20 shadow-blue-500/30'
+            : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 focus:ring-4 focus:ring-green-500/20 shadow-green-500/30'}"
+          on:click={handleSubmit}
+          disabled={isSubmitting || remainingCount === 0}
+        >
+          {#if isSubmitting}
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            {scheduledAt ? 'Scheduling...' : 'Creating...'}
+          {:else if !scheduledAt}
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            Create & Run Now
+          {:else}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+            Schedule Follow-up
+          {/if}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}

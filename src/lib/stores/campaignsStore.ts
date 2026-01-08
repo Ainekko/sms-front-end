@@ -135,6 +135,40 @@ export async function executeCampaign(id: string) {
 }
 
 /**
+ * Cancel a pending campaign.
+ */
+export async function cancelCampaign(id: string) {
+    campaignsStore.setLoading(true);
+    try {
+        const campaign = await campaignsApi.cancelCampaign(id);
+        campaignsStore.updateCampaignInList(campaign);
+        return campaign;
+    } catch (error) {
+        console.error('Failed to cancel campaign:', error);
+        campaignsStore.setError(error instanceof Error ? error.message : 'Failed to cancel campaign');
+        throw error;
+    }
+}
+
+/**
+ * Delete a campaign (only pending or cancelled).
+ */
+export async function deleteCampaign(id: string) {
+    campaignsStore.setLoading(true);
+    try {
+        await campaignsApi.deleteCampaign(id);
+        // Remove from campaigns list
+        campaignsStore.setCampaigns(
+            (await campaignsApi.getCampaigns())
+        );
+    } catch (error) {
+        console.error('Failed to delete campaign:', error);
+        campaignsStore.setError(error instanceof Error ? error.message : 'Failed to delete campaign');
+        throw error;
+    }
+}
+
+/**
  * Load conversations for a campaign.
  */
 export async function loadCampaignConversations(id: string) {
