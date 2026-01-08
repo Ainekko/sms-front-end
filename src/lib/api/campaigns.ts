@@ -59,6 +59,7 @@ export interface CreateCampaignRequest {
     target_brand_id?: string;
     target_group_id?: string;
     target_contact_id?: string;
+    allow_expensive_encoding?: boolean;
 }
 
 export interface ExecuteCampaignResponse {
@@ -69,6 +70,27 @@ export interface UpdateCampaignRequest {
     name?: string;
     message_body?: string;
     scheduled_at?: string | null;
+    allow_expensive_encoding?: boolean;
+}
+
+// =============================================================================
+// Message Validation Types
+// =============================================================================
+
+export interface MessageValidationRequest {
+    message_body: string;
+}
+
+export interface MessageValidationResponse {
+    is_valid: boolean;
+    requires_override: boolean;
+    encoding: 'GSM-7' | 'UCS-2';
+    segment_count: number;
+    char_count: number;
+    warning_message: string | null;
+    problematic_chars: string[];
+    suggested_replacements: Record<string, string>;
+    message_after_normalization: string | null;
 }
 
 export interface CampaignInsightsResponse {
@@ -185,6 +207,7 @@ export interface CreateFollowUpCampaignRequest {
     exclude_dnc: boolean;
     exclude_no_reply: boolean;
     exclude_priority_below?: number | null;
+    allow_expensive_encoding?: boolean;
 }
 
 export interface FollowUpPreviewResponse {
@@ -227,6 +250,14 @@ export async function createFollowUpCampaign(data: CreateFollowUpCampaignRequest
 }
 
 /**
+ * Validate a message for SMS encoding.
+ * Returns encoding info, segment count, and warnings for expensive characters.
+ */
+export async function validateMessage(messageBody: string): Promise<MessageValidationResponse> {
+    return api.post<MessageValidationResponse>('/campaigns/validate-message', { message_body: messageBody });
+}
+
+/**
  * Campaigns API object.
  */
 export const campaignsApi = {
@@ -240,6 +271,7 @@ export const campaignsApi = {
     getCampaignConversations,
     getCampaignInsights,
     getFollowUpPreview,
-    createFollowUpCampaign
+    createFollowUpCampaign,
+    validateMessage
 };
 

@@ -3,7 +3,12 @@
   import { format } from 'date-fns';
   import { brandsStore, loadBrands } from '$lib/stores/brandsStore';
   import { groupsStore, loadGroups } from '$lib/stores/groupsStore';
-  import type { CreateCampaignRequest, CampaignResponse } from '$lib/api/campaigns';
+  import {
+    validateMessage,
+    type CreateCampaignRequest,
+    type CampaignResponse,
+    type MessageValidationResponse
+  } from '$lib/api/campaigns';
 
   export let campaign: CampaignResponse | null = null;
   export let isLoading: boolean = false;
@@ -19,11 +24,43 @@
   let scheduledAt = '';
   let fromBrandId = '';
 
+  // Message validation state
+  let validation: MessageValidationResponse | null = null;
+  let isValidating = false;
+  let validationTimeout: ReturnType<typeof setTimeout> | null = null;
+  let allowExpensiveEncoding = false;
+
   // Derived state for read-only mode
   $: isReadOnly =
     campaign && ['processing', 'completed', 'cancelled', 'failed'].includes(campaign.status);
   $: brands = $brandsStore.brands;
   $: groups = $groupsStore.groups;
+
+  // Debounced validation on message change
+  $: if (messageBody && !isReadOnly) {
+    if (validationTimeout) clearTimeout(validationTimeout);
+    validationTimeout = setTimeout(() => validateMessageBody(), 500);
+  }
+
+  async function validateMessageBody() {
+    if (!messageBody.trim()) {
+      validation = null;
+      return;
+    }
+    isValidating = true;
+    try {
+      validation = await validateMessage(messageBody);
+      // Reset override if no longer needed
+      if (!validation.requires_override) {
+        allowExpensiveEncoding = false;
+      }
+    } catch (error) {
+      console.error('Validation failed:', error);
+      validation = null;
+    } finally {
+      isValidating = false;
+    }
+  }
 
   onMount(async () => {
     await Promise.all([loadBrands(), loadGroups()]);
@@ -42,12 +79,6 @@
     }
     // Set fromBrandId if available, otherwise default to first brand if not set
     if (campaign.from_brand_name) {
-      // If we have the name but need ID, we might need to find it in brands list
-      // But usually the API should return from_brand_id too if we added it.
-      // Let's assume we can match by name or just rely on what we have.
-      // Actually, looking at the API response type, we didn't add from_brand_id to the response interface explicitly in my previous edit,
-      // but it should be there. Let's check if we can find the brand by name or if we should just trust the user selection.
-      // For now, let's try to find the brand ID from the list if possible.
       const foundBrand = brands.find((b) => b.name === campaign?.from_brand_name);
       if (foundBrand) fromBrandId = foundBrand.id;
     }
@@ -55,6 +86,10 @@
 
   function handleSubmit() {
     if (isReadOnly) return;
+    // Block submit if expensive encoding not allowed
+    if (validation?.requires_override && !allowExpensiveEncoding) {
+      return;
+    }
     const payload: CreateCampaignRequest = {
       name,
       message_body: messageBody,
@@ -63,7 +98,8 @@
       scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       target_brand_id: targetType === 'brand' ? targetBrandId : undefined,
       target_group_id: targetType === 'group' ? targetGroupId : undefined,
-      target_contact_id: targetType === 'contacts' ? targetContactId : undefined
+      target_contact_id: targetType === 'contacts' ? targetContactId : undefined,
+      allow_expensive_encoding: allowExpensiveEncoding
     };
     dispatch('submit', payload);
   }
@@ -132,7 +168,10 @@
             rows="4"
             bind:value={messageBody}
             disabled={isReadOnly}
-            class="block w-full rounded-xl border-gray-200 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-3 px-4 disabled:opacity-60 disabled:cursor-not-allowed transition-colors resize-none"
+            class="block w-full rounded-xl border-gray-200 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-3 px-4 disabled:opacity-60 disabled:cursor-not-allowed transition-colors resize-none {validation?.requires_override &&
+            !allowExpensiveEncoding
+              ? 'border-amber-400 ring-1 ring-amber-400'
+              : ''}"
             placeholder="Type your message here..."
           ></textarea>
           {#if !isReadOnly}
@@ -141,6 +180,123 @@
             </div>
           {/if}
         </div>
+
+        <!-- Segment Info Bar -->
+        {#if !isReadOnly && messageBody.length > 0}
+          <div
+            class="mt-2 flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg border border-gray-100"
+          >
+            <div class="flex items-center gap-4 text-xs">
+              {#if isValidating}
+                <span class="text-gray-400 flex items-center gap-1">
+                  <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    ></path>
+                  </svg>
+                  Analyzing...
+                </span>
+              {:else if validation}
+                <span class="flex items-center gap-1.5">
+                  <span class="font-semibold text-gray-700">{validation.segment_count}</span>
+                  <span class="text-gray-500"
+                    >segment{validation.segment_count !== 1 ? 's' : ''}</span
+                  >
+                </span>
+                <span class="text-gray-300">•</span>
+                <span class="flex items-center gap-1">
+                  <span
+                    class="{validation.encoding === 'GSM-7'
+                      ? 'text-green-600'
+                      : 'text-amber-600'} font-medium"
+                  >
+                    {validation.encoding}
+                  </span>
+                </span>
+                <span class="text-gray-300">•</span>
+                <span class="text-gray-500">{validation.char_count} characters</span>
+              {:else}
+                <span class="text-gray-400">Enter message to see segment info</span>
+              {/if}
+            </div>
+          </div>
+        {/if}
+
+        <!-- Expensive Encoding Warning -->
+        {#if !isReadOnly && validation?.requires_override}
+          <div class="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+            <div class="flex items-start gap-3">
+              <div
+                class="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center"
+              >
+                <svg
+                  class="w-4 h-4 text-amber-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <div class="flex-1">
+                <h4 class="text-sm font-semibold text-amber-800">Expensive Encoding Detected</h4>
+                <p class="text-xs text-amber-700 mt-1">
+                  Message contains special characters requiring UCS-2 encoding. This reduces
+                  capacity from 160 to 70 characters per segment, resulting in <strong
+                    >{validation.segment_count} segments</strong
+                  > which may cost more.
+                </p>
+                {#if validation.problematic_chars.length > 0}
+                  <p class="text-xs text-amber-600 mt-2">
+                    Problematic: <code class="bg-amber-100 px-1 py-0.5 rounded text-[10px]"
+                      >{validation.problematic_chars.slice(0, 5).join(' ')}{validation
+                        .problematic_chars.length > 5
+                        ? ` +${validation.problematic_chars.length - 5} more`
+                        : ''}</code
+                    >
+                  </p>
+                {/if}
+
+                <!-- Override Toggle -->
+                <div class="mt-3 flex items-center gap-3">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={allowExpensiveEncoding}
+                    on:click={() => (allowExpensiveEncoding = !allowExpensiveEncoding)}
+                    class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 {allowExpensiveEncoding
+                      ? 'bg-amber-600'
+                      : 'bg-gray-300'}"
+                  >
+                    <span
+                      class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {allowExpensiveEncoding
+                        ? 'translate-x-4'
+                        : 'translate-x-0'}"
+                    ></span>
+                  </button>
+                  <span class="text-xs font-medium text-amber-800">
+                    Allow expensive encoding and proceed anyway
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        {/if}
       </div>
 
       <!-- When to Send Section -->

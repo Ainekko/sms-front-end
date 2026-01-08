@@ -10,9 +10,11 @@
   import {
     getFollowUpPreview,
     createFollowUpCampaign,
+    validateMessage,
     type CampaignResponse,
     type FollowUpPreviewResponse,
-    type CreateFollowUpCampaignRequest
+    type CreateFollowUpCampaignRequest,
+    type MessageValidationResponse
   } from '$lib/api/campaigns';
   import { showSuccess, showError } from '$lib/stores/uiStore';
 
@@ -33,6 +35,12 @@
   let preview: FollowUpPreviewResponse | null = null;
   let isLoadingPreview = false;
   let isSubmitting = false;
+
+  // Message validation state
+  let validation: MessageValidationResponse | null = null;
+  let isValidating = false;
+  let validationTimeout: ReturnType<typeof setTimeout> | null = null;
+  let allowExpensiveEncoding = false;
 
   // Computed remaining count
   $: remainingCount = computeRemainingCount(
@@ -100,9 +108,40 @@
     }
   }
 
+  // Debounced message validation
+  $: if (messageBody) {
+    if (validationTimeout) clearTimeout(validationTimeout);
+    validationTimeout = setTimeout(() => validateMessageBody(), 500);
+  }
+
+  async function validateMessageBody() {
+    if (!messageBody.trim()) {
+      validation = null;
+      return;
+    }
+    isValidating = true;
+    try {
+      validation = await validateMessage(messageBody);
+      if (!validation.requires_override) {
+        allowExpensiveEncoding = false;
+      }
+    } catch (error) {
+      console.error('Validation failed:', error);
+      validation = null;
+    } finally {
+      isValidating = false;
+    }
+  }
+
   async function handleSubmit() {
     if (!messageBody.trim()) {
       showError('Message body is required');
+      return;
+    }
+
+    // Block submit if expensive encoding not allowed
+    if (validation?.requires_override && !allowExpensiveEncoding) {
+      showError('Please enable expensive encoding override to proceed');
       return;
     }
 
@@ -115,7 +154,8 @@
         scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
         exclude_dnc: excludeDnc,
         exclude_no_reply: excludeNoReply,
-        exclude_priority_below: minPriorityThreshold > 0 ? minPriorityThreshold : undefined
+        exclude_priority_below: minPriorityThreshold > 0 ? minPriorityThreshold : undefined,
+        allow_expensive_encoding: allowExpensiveEncoding
       };
 
       const newCampaign = await createFollowUpCampaign(request);
@@ -545,13 +585,106 @@
               id="message-body"
               bind:value={messageBody}
               rows="4"
-              class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 focus:ring-2 focus:ring-gray-300 focus:border-gray-300 resize-none transition-colors"
+              class="w-full px-4 py-3 bg-gray-50 border rounded-xl text-gray-900 focus:ring-2 focus:ring-gray-300 focus:border-gray-300 resize-none transition-colors {validation?.requires_override &&
+              !allowExpensiveEncoding
+                ? 'border-amber-400 ring-1 ring-amber-400'
+                : 'border-gray-200'}"
               placeholder="Hey {name}, just following up on..."
             ></textarea>
             <span class="absolute bottom-3 right-3 text-xs text-gray-400">
               {messageBody.length} chars
             </span>
           </div>
+
+          <!-- Segment Info Bar -->
+          {#if messageBody.length > 0}
+            <div
+              class="mt-2 flex items-center justify-between px-3 py-2 bg-gray-50 rounded-lg border border-gray-100"
+            >
+              <div class="flex items-center gap-3 text-xs">
+                {#if isValidating}
+                  <span class="text-gray-400 flex items-center gap-1">
+                    <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                    Analyzing...
+                  </span>
+                {:else if validation}
+                  <span class="flex items-center gap-1">
+                    <span class="font-semibold text-gray-700">{validation.segment_count}</span>
+                    <span class="text-gray-500"
+                      >segment{validation.segment_count !== 1 ? 's' : ''}</span
+                    >
+                  </span>
+                  <span class="text-gray-300">•</span>
+                  <span
+                    class="{validation.encoding === 'GSM-7'
+                      ? 'text-green-600'
+                      : 'text-amber-600'} font-medium"
+                  >
+                    {validation.encoding}
+                  </span>
+                {/if}
+              </div>
+            </div>
+          {/if}
+
+          <!-- Expensive Encoding Warning -->
+          {#if validation?.requires_override}
+            <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <div class="flex items-start gap-2">
+                <svg
+                  class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <div class="flex-1">
+                  <p class="text-xs text-amber-700">
+                    <strong>Expensive encoding:</strong> Special characters require UCS-2 ({validation.segment_count}
+                    segments).
+                  </p>
+                  <div class="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={allowExpensiveEncoding}
+                      on:click={() => (allowExpensiveEncoding = !allowExpensiveEncoding)}
+                      class="relative inline-flex h-4 w-8 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 {allowExpensiveEncoding
+                        ? 'bg-amber-600'
+                        : 'bg-gray-300'}"
+                    >
+                      <span
+                        class="pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow transition duration-200 {allowExpensiveEncoding
+                          ? 'translate-x-4'
+                          : 'translate-x-0'}"
+                      ></span>
+                    </button>
+                    <span class="text-[11px] text-amber-700">Allow anyway</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {/if}
         </div>
       </div>
 
