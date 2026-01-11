@@ -145,9 +145,18 @@
 
   let lastLoadedBrandId: string | null | undefined;
 
-  $: if (mode === 'default' && brandId !== lastLoadedBrandId) {
-    lastLoadedBrandId = brandId;
-    loadConversations(brandId ?? undefined);
+  // Only load conversations when we have a valid brandId
+  // This prevents loading all conversations when no brand is selected
+  $: if (mode === 'default') {
+    if (brandId && brandId !== lastLoadedBrandId) {
+      lastLoadedBrandId = brandId;
+      loadConversations(brandId);
+    } else if (!brandId && lastLoadedBrandId) {
+      // Brand was cleared - don't load all conversations, just reset
+      lastLoadedBrandId = undefined;
+      // Optionally clear conversations to prevent stale data
+      // conversationsStore.reset();
+    }
   }
 
   // ==========================================================================
@@ -237,8 +246,11 @@
   }
 
   function handleRetry(): void {
-    if (mode === 'default') loadConversations();
-    else dispatch('retry');
+    if (mode === 'default' && brandId) {
+      loadConversations(brandId);
+    } else if (mode === 'campaign') {
+      dispatch('retry');
+    }
   }
 
   async function handleArchive(conversation: any, e: Event) {

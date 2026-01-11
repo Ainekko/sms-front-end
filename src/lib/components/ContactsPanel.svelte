@@ -37,6 +37,7 @@
   import { showSuccess, showError } from '../stores/uiStore';
   import AddToGroupModal from './groups/AddToGroupModal.svelte';
   import BulkContactImportModal from './BulkContactImportModal.svelte';
+  import ContactExportModal from './ContactExportModal.svelte';
 
   // ==========================================================================
   // Props
@@ -71,6 +72,9 @@
   /** Bulk import modal */
   let showBulkImport = false;
 
+  /** Export modal */
+  let showExport = false;
+
   /** Selection State */
   let selectedContactIds: Set<string> = new Set();
   $: isAllSelected = contacts.length > 0 && selectedContactIds.size === contacts.length;
@@ -84,8 +88,12 @@
   $: contacts = $brandsStore.contacts;
   $: isLoading = $brandsStore.isLoadingContacts;
 
-  // Load contacts when panel opens or brand changes
-  $: if (isOpen && currentBrand) {
+  // Track which brand we've loaded contacts for
+  let loadedBrandId: string | null = null;
+
+  // Load contacts when panel opens or brand changes (but only once per brand)
+  $: if (isOpen && currentBrand && currentBrand.id !== loadedBrandId) {
+    loadedBrandId = currentBrand.id;
     loadBrandContacts(currentBrand.id);
   }
 
@@ -384,7 +392,7 @@
             </button>
             <button
               type="button"
-              class="flex items-center justify-center space-x-2 px-4 py-2.5
+              class="flex items-center justify-center space-x-2 px-3 py-2.5
                                  text-sm text-emerald-600 bg-white border-2 border-dashed border-emerald-300
                                  rounded-lg hover:bg-emerald-50 hover:border-emerald-400 transition-colors"
               on:click={() => (showBulkImport = true)}
@@ -398,7 +406,25 @@
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
                 />
               </svg>
-              <span>Import CSV</span>
+              <span>Import</span>
+            </button>
+            <button
+              type="button"
+              class="flex items-center justify-center space-x-2 px-3 py-2.5
+                                 text-sm text-violet-600 bg-white border-2 border-dashed border-violet-300
+                                 rounded-lg hover:bg-violet-50 hover:border-violet-400 transition-colors"
+              on:click={() => (showExport = true)}
+              title="Export to CSV"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              <span>Export</span>
             </button>
           </div>
         {/if}
@@ -562,6 +588,12 @@
   isOpen={showBulkImport}
   on:close={() => (showBulkImport = false)}
   on:imported={() => currentBrand && loadBrandContacts(currentBrand.id)}
+/>
+
+<ContactExportModal
+  isOpen={showExport}
+  brandId={currentBrand?.id || null}
+  on:close={() => (showExport = false)}
 />
 
 <style>

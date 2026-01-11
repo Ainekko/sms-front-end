@@ -39,6 +39,10 @@ export interface BrandContactResponse {
     id: string;
     phone_number: string;
     name: string | null;
+    address: string | null;
+    ai_priority: number | null;
+    ai_do_not_contact: boolean;
+    has_replied: boolean;
     created_at: string;
 }
 

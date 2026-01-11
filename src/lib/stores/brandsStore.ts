@@ -74,6 +74,15 @@ export interface BrandContact {
     /** Display name (optional) */
     name: string | null;
 
+    /** Address (optional) */
+    address: string | null;
+
+    /** AI priority level (0-3) */
+    aiPriority: number | null;
+
+    /** AI do-not-contact flag */
+    aiDoNotContact: boolean;
+
     /** Creation timestamp */
     createdAt: Date;
 }
@@ -332,6 +341,9 @@ function transformContact(response: BrandContactResponse): BrandContact {
         id: response.id,
         phoneNumber: response.phone_number,
         name: response.name,
+        address: response.address,
+        aiPriority: response.ai_priority,
+        aiDoNotContact: response.ai_do_not_contact ?? false,
         createdAt: new Date(response.created_at)
     };
 }
