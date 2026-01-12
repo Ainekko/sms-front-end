@@ -17,6 +17,7 @@
     type MessageValidationResponse
   } from '$lib/api/campaigns';
   import { showSuccess, showError } from '$lib/stores/uiStore';
+  import { getLocalMinDatetime, getTomorrowAtHour } from '$lib/utils/date';
 
   export let parentCampaign: CampaignResponse;
   export let isOpen: boolean = false;
@@ -509,10 +510,7 @@
                 : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'}"
               on:click={() => {
                 if (!scheduledAt) {
-                  const tomorrow = new Date();
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  tomorrow.setHours(9, 0, 0, 0);
-                  scheduledAt = tomorrow.toISOString().slice(0, 16);
+                  scheduledAt = getTomorrowAtHour(9);
                 }
               }}
             >
@@ -569,7 +567,7 @@
                 type="datetime-local"
                 bind:value={scheduledAt}
                 class="block w-full rounded-xl border-blue-200 bg-white text-gray-900 focus:border-blue-500 focus:ring-blue-500 text-sm py-3 px-4 shadow-sm"
-                min={new Date().toISOString().slice(0, 16)}
+                min={getLocalMinDatetime()}
               />
             </div>
           {/if}
