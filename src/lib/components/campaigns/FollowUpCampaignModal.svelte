@@ -30,6 +30,8 @@
   let scheduledAt = '';
   let excludeDnc = true;
   let excludeNoReply = false;
+  let excludeFailedDelivery = true; // New: exclude failed deliveries by default
+  let targetOnlyNoReply = false; // New: target ONLY non-responders (mutually exclusive with excludeNoReply)
   let minPriorityThreshold = 0; // 0 = include all, 1 = exclude 0, 2 = exclude 0-1, 3 = exclude 0-2
 
   // Preview state
@@ -48,6 +50,8 @@
     preview,
     excludeDnc,
     excludeNoReply,
+    excludeFailedDelivery,
+    targetOnlyNoReply,
     minPriorityThreshold
   );
 
@@ -67,12 +71,25 @@
     p: FollowUpPreviewResponse | null,
     dnc: boolean,
     noReply: boolean,
+    failedDelivery: boolean,
+    onlyNoReply: boolean,
     threshold: number
   ): number {
     if (!p) return 0;
     let excluded = 0;
     if (dnc) excluded += p.dnc_count;
-    if (noReply) excluded += p.no_reply_count;
+
+    // No Reply logic: either exclude or target only non-responders
+    if (noReply) {
+      excluded += p.no_reply_count;
+    } else if (onlyNoReply) {
+      // If targeting only non-responders, exclude those who DID reply
+      // (original - no_reply = replied count)
+      excluded += p.original_recipients - p.no_reply_count;
+    }
+
+    if (failedDelivery) excluded += p.failed_delivery_count;
+
     // Exclude contacts below the threshold
     excluded += computePriorityExcluded(p, threshold);
     return Math.max(0, p.original_recipients - excluded);
@@ -86,7 +103,13 @@
   async function loadPreview() {
     isLoadingPreview = true;
     try {
-      preview = await getFollowUpPreview(parentCampaign.id, excludeDnc, excludeNoReply);
+      preview = await getFollowUpPreview(
+        parentCampaign.id,
+        excludeDnc,
+        excludeNoReply,
+        excludeFailedDelivery,
+        targetOnlyNoReply
+      );
     } catch (error) {
       // If API doesn't exist yet, use mock data
       console.warn('Follow-up preview API not available, using mock data');
@@ -96,6 +119,7 @@
         original_recipients: parentCampaign.total_recipients,
         dnc_count: Math.floor(parentCampaign.total_recipients * 0.15),
         no_reply_count: Math.floor(parentCampaign.total_recipients * 0.45),
+        failed_delivery_count: Math.floor(parentCampaign.total_recipients * 0.08),
         priority_breakdown: {
           '0': Math.floor(parentCampaign.total_recipients * 0.05),
           '1': Math.floor(parentCampaign.total_recipients * 0.1),
@@ -155,6 +179,8 @@
         scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
         exclude_dnc: excludeDnc,
         exclude_no_reply: excludeNoReply,
+        exclude_failed_delivery: excludeFailedDelivery,
+        target_only_no_reply: targetOnlyNoReply,
         exclude_priority_below: minPriorityThreshold > 0 ? minPriorityThreshold : undefined,
         allow_expensive_encoding: allowExpensiveEncoding
       };
@@ -302,34 +328,149 @@
               </button>
             </div>
 
-            <!-- No Reply Option -->
+            <!-- Failed Delivery Option (New) -->
             <div
               class="flex items-center gap-4 p-4 rounded-xl border transition-all
-                {excludeNoReply ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-100'}"
+                {excludeFailedDelivery ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-100'}"
             >
               <div class="flex-1">
-                <p class="font-medium text-gray-900">No Reply</p>
-                <p class="text-sm text-gray-500">Contacts who didn't respond</p>
+                <p class="font-medium text-gray-900">Failed Delivery</p>
+                <p class="text-sm text-gray-500">Messages that failed or were undelivered</p>
               </div>
               <span class="text-sm font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg">
-                {isLoadingPreview ? '...' : (preview?.no_reply_count || 0).toLocaleString()}
+                {isLoadingPreview ? '...' : (preview?.failed_delivery_count || 0).toLocaleString()}
               </span>
               <!-- Toggle Switch -->
               <button
                 type="button"
                 role="switch"
-                aria-checked={excludeNoReply}
-                on:click={() => (excludeNoReply = !excludeNoReply)}
-                class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 {excludeNoReply
+                aria-checked={excludeFailedDelivery}
+                on:click={() => (excludeFailedDelivery = !excludeFailedDelivery)}
+                class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 {excludeFailedDelivery
                   ? 'bg-gray-900'
                   : 'bg-gray-200'}"
               >
                 <span
-                  class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {excludeNoReply
+                  class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {excludeFailedDelivery
                     ? 'translate-x-5'
                     : 'translate-x-0'}"
                 ></span>
               </button>
+            </div>
+
+            <!-- No Reply Section (Enhanced with Targeting Option) -->
+            <div class="p-4 rounded-xl border border-gray-100 bg-white space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <svg
+                      class="w-4 h-4 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-900">Non-Responders</p>
+                    <p class="text-xs text-gray-500">Contacts who didn't reply</p>
+                  </div>
+                </div>
+                <span
+                  class="text-sm font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg"
+                >
+                  {isLoadingPreview ? '...' : (preview?.no_reply_count || 0).toLocaleString()}
+                </span>
+              </div>
+
+              <!-- Mutually Exclusive Options -->
+              <div class="grid grid-cols-2 gap-2 pt-2">
+                <!-- Exclude No Reply -->
+                <button
+                  type="button"
+                  class="flex items-center gap-2 p-3 rounded-lg border-2 text-left transition-all {excludeNoReply
+                    ? 'border-red-400 bg-red-50 ring-1 ring-red-400'
+                    : 'border-gray-100 bg-gray-50 hover:border-gray-200'}"
+                  on:click={() => {
+                    excludeNoReply = !excludeNoReply;
+                    if (excludeNoReply) targetOnlyNoReply = false; // Mutually exclusive
+                  }}
+                >
+                  <div
+                    class="w-4 h-4 rounded-full border-2 flex items-center justify-center {excludeNoReply
+                      ? 'border-red-500 bg-red-500'
+                      : 'border-gray-300'}"
+                  >
+                    {#if excludeNoReply}
+                      <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fill-rule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                    {/if}
+                  </div>
+                  <div>
+                    <p
+                      class="text-xs font-semibold {excludeNoReply
+                        ? 'text-red-700'
+                        : 'text-gray-600'}"
+                    >
+                      Exclude
+                    </p>
+                    <p class="text-[10px] {excludeNoReply ? 'text-red-600' : 'text-gray-400'}">
+                      Skip silent contacts
+                    </p>
+                  </div>
+                </button>
+
+                <!-- Target ONLY No Reply -->
+                <button
+                  type="button"
+                  class="flex items-center gap-2 p-3 rounded-lg border-2 text-left transition-all {targetOnlyNoReply
+                    ? 'border-green-400 bg-green-50 ring-1 ring-green-400'
+                    : 'border-gray-100 bg-gray-50 hover:border-gray-200'}"
+                  on:click={() => {
+                    targetOnlyNoReply = !targetOnlyNoReply;
+                    if (targetOnlyNoReply) excludeNoReply = false; // Mutually exclusive
+                  }}
+                >
+                  <div
+                    class="w-4 h-4 rounded-full border-2 flex items-center justify-center {targetOnlyNoReply
+                      ? 'border-green-500 bg-green-500'
+                      : 'border-gray-300'}"
+                  >
+                    {#if targetOnlyNoReply}
+                      <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fill-rule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                    {/if}
+                  </div>
+                  <div>
+                    <p
+                      class="text-xs font-semibold {targetOnlyNoReply
+                        ? 'text-green-700'
+                        : 'text-gray-600'}"
+                    >
+                      Target Only
+                    </p>
+                    <p class="text-[10px] {targetOnlyNoReply ? 'text-green-600' : 'text-gray-400'}">
+                      Re-engage non-responders
+                    </p>
+                  </div>
+                </button>
+              </div>
             </div>
 
             <!-- AI Priority Threshold Slider -->

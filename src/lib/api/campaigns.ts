@@ -17,6 +17,8 @@ export type TargetType = 'brand' | 'group' | 'contacts';
 export interface ExclusionFilters {
     exclude_dnc: boolean;
     exclude_no_reply: boolean;
+    exclude_failed_delivery: boolean;
+    target_only_no_reply: boolean;
     exclude_priority_below?: number | null;
     excluded_count: number;
 }
@@ -206,6 +208,8 @@ export interface CreateFollowUpCampaignRequest {
     scheduled_at?: string | null;
     exclude_dnc: boolean;
     exclude_no_reply: boolean;
+    exclude_failed_delivery: boolean;
+    target_only_no_reply: boolean;
     exclude_priority_below?: number | null;
     allow_expensive_encoding?: boolean;
 }
@@ -216,6 +220,7 @@ export interface FollowUpPreviewResponse {
     original_recipients: number;
     dnc_count: number;
     no_reply_count: number;
+    failed_delivery_count: number;
     priority_breakdown: Record<string, number>;
     remaining_after_exclusions: number;
 }
@@ -227,11 +232,15 @@ export async function getFollowUpPreview(
     parentCampaignId: string,
     excludeDnc: boolean = true,
     excludeNoReply: boolean = false,
+    excludeFailedDelivery: boolean = true,
+    targetOnlyNoReply: boolean = false,
     excludePriorityBelow?: number
 ): Promise<FollowUpPreviewResponse> {
     const params: Record<string, any> = {
         exclude_dnc: excludeDnc,
-        exclude_no_reply: excludeNoReply
+        exclude_no_reply: excludeNoReply,
+        exclude_failed_delivery: excludeFailedDelivery,
+        target_only_no_reply: targetOnlyNoReply
     };
     if (excludePriorityBelow !== undefined) {
         params.exclude_priority_below = excludePriorityBelow;
