@@ -16,6 +16,7 @@
   import CreateGroupModal from '$lib/components/groups/CreateGroupModal.svelte';
   import GroupContactSelectorModal from '$lib/components/groups/GroupContactSelectorModal.svelte';
   import SendToGroupModal from '$lib/components/groups/SendToGroupModal.svelte';
+  import GroupValidationProgress from '$lib/components/groups/GroupValidationProgress.svelte';
 
   // State
   let groups: ContactGroup[] = [];
@@ -390,6 +391,11 @@
             <p class="text-sm font-medium text-gray-500 mb-1">Last Active</p>
             <p class="text-3xl font-bold text-gray-900">-</p>
           </div>
+        </div>
+
+        <!-- Validation Panel -->
+        <div class="mt-6">
+          <GroupValidationProgress group={selectedGroup} on:refresh={loadGroups} />
         </div>
       </div>
 

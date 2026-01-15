@@ -47,6 +47,10 @@ export interface BulkContactImportRequest {
     skip_duplicates?: boolean;
     group_id?: string;
     group_name?: string;
+    /** Enable phone validation for imported contacts */
+    validate_phones?: boolean;
+    /** Skip Stage 3 (paid) reachability check - saves ~$0.005/number */
+    skip_advanced_validation?: boolean;
 }
 
 export interface BulkContactImportError {
@@ -63,6 +67,10 @@ export interface BulkContactImportResponse {
     contacts: ContactResponse[];
     group_id?: string;
     group_name?: string;
+    /** Whether validation was queued for background processing */
+    validation_queued?: boolean;
+    /** Message about validation status, e.g., "Validation queued for 500 contacts" */
+    validation_message?: string | null;
 }
 
 // =============================================================================

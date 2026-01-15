@@ -73,6 +73,10 @@
   /** Skip duplicates option */
   let skipDuplicates = true;
 
+  /** Phone validation options */
+  let validatePhones = true; // ON by default
+  let skipAdvancedValidation = false;
+
   /** File input reference */
   let fileInput: HTMLInputElement;
 
@@ -119,6 +123,8 @@
     selectedGroupId = '';
     newGroupName = '';
     skipDuplicates = true;
+    validatePhones = true;
+    skipAdvancedValidation = false;
     selectedFile = null;
     csvPreview = [];
     step = 'upload';
@@ -235,7 +241,9 @@
         brand_ids: selectedBrandIds.size > 0 ? Array.from(selectedBrandIds) : undefined,
         skip_duplicates: skipDuplicates,
         group_id: selectedGroupId || undefined,
-        group_name: !selectedGroupId && newGroupName ? newGroupName : undefined
+        group_name: !selectedGroupId && newGroupName ? newGroupName : undefined,
+        validate_phones: validatePhones,
+        skip_advanced_validation: skipAdvancedValidation
       });
 
       step = 'results';
@@ -631,6 +639,91 @@
                 </p>
               {/if}
             </div>
+
+            <!-- Phone Validation Options -->
+            <div class="space-y-3 pt-4 border-t border-gray-100">
+              <label class="block text-sm font-medium text-gray-700"> Phone Validation </label>
+
+              <!-- Main Toggle -->
+              <label
+                class="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+              >
+                <div class="flex items-center space-x-3">
+                  <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <svg
+                      class="w-4 h-4 text-emerald-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <span class="text-sm font-medium text-gray-700">Validate phone numbers</span>
+                    <p class="text-xs text-gray-500">
+                      Check for invalid, landline, and unreachable numbers
+                    </p>
+                  </div>
+                </div>
+                <div class="relative">
+                  <input type="checkbox" bind:checked={validatePhones} class="sr-only peer" />
+                  <div
+                    class="w-11 h-6 bg-gray-300 rounded-full peer peer-checked:bg-emerald-500 transition-colors"
+                  ></div>
+                  <div
+                    class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"
+                  ></div>
+                </div>
+              </label>
+
+              {#if validatePhones}
+                <!-- Skip Advanced Validation Checkbox -->
+                <label class="flex items-center space-x-3 pl-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    bind:checked={skipAdvancedValidation}
+                    class="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                  />
+                  <div>
+                    <span class="text-sm text-gray-600">Skip reachability check</span>
+                    <p class="text-xs text-gray-400">Saves ~$0.005 per number (Stage 3)</p>
+                  </div>
+                </label>
+
+                <!-- Cost Estimate Warning -->
+                {#if !skipAdvancedValidation && csvPreview.length > 1}
+                  {@const estimatedRows = csvPreview.length - 1}
+                  {@const estimatedCost = (Math.floor(estimatedRows * 0.8) * 0.005).toFixed(2)}
+                  <div
+                    class="flex items-center space-x-2 p-3 bg-amber-50 rounded-lg text-amber-700 text-sm"
+                  >
+                    <svg
+                      class="w-5 h-5 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span
+                      >Reachability check costs ~$0.005/number. Preview shows {estimatedRows} rows (~${estimatedCost}
+                      estimate).</span
+                    >
+                  </div>
+                {/if}
+              {/if}
+            </div>
           </div>
 
           <!-- Step: Importing -->
@@ -692,6 +785,31 @@
                   />
                 </svg>
                 <span>Contacts assigned to group: <strong>{importResults.group_name}</strong></span>
+              </div>
+            {/if}
+
+            <!-- Validation Queued Info -->
+            {#if importResults.validation_queued}
+              <div
+                class="flex items-center space-x-2 p-3 bg-purple-50 rounded-lg text-purple-700 text-sm"
+              >
+                <svg
+                  class="w-5 h-5 animate-pulse"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>
+                  {importResults.validation_message ||
+                    'Phone validation queued for background processing'}
+                </span>
               </div>
             {/if}
 
