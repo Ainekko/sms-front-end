@@ -48,11 +48,13 @@
 
   $: if (selectedGroupId && groups.length > 0) {
     const group = groups.find((g) => g.id === selectedGroupId);
-    if (group) {
+    if (group && selectedGroup?.id !== group.id) {
       selectedGroup = group;
+      loadGroupContacts(group.id);
     }
   } else if (!selectedGroupId) {
     selectedGroup = null;
+    groupContacts = [];
   }
 
   onMount(async () => {
@@ -64,10 +66,13 @@
     try {
       groups = await groupsApi.listGroups();
 
-      // If ID in URL, select it
+      // If ID in URL, select it and load its contacts
       if (selectedGroupId) {
         const group = groups.find((g) => g.id === selectedGroupId);
-        if (group) selectedGroup = group;
+        if (group) {
+          selectedGroup = group;
+          loadGroupContacts(group.id);
+        }
       }
     } catch (err) {
       console.error('Failed to load groups:', err);

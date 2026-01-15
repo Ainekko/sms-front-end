@@ -5,6 +5,7 @@
  */
 
 import { api } from './base';
+import { config } from '../config';
 
 // =============================================================================
 // Types
@@ -121,12 +122,16 @@ export async function getGroupContacts(groupId: string): Promise<any[]> {
 /**
  * Start phone validation for all contacts in a group.
  * This runs as a background job.
+ * @param groupId - The group to validate
+ * @param skipStage3 - Skip the advanced reachability check (stage 3)
+ * @param force - Force revalidation of all contacts (resets existing results)
  */
 export async function startGroupValidation(
     groupId: string,
-    skipStage3 = false
+    skipStage3 = false,
+    force = false
 ): Promise<{ message: string; status: string; group_id: string }> {
-    return api.post(`/groups/${groupId}/validate?skip_stage3=${skipStage3}`, {});
+    return api.post(`/groups/${groupId}/validate?skip_stage3=${skipStage3}&force=${force}`, {});
 }
 
 /**
@@ -137,15 +142,53 @@ export async function getValidationStatus(groupId: string): Promise<ValidationSt
 }
 
 /**
- * Get the export URL for downloading group contacts as CSV.
+ * Export group contacts as CSV with authentication.
+ * Fetches the CSV data with proper auth headers and triggers a download.
+ * @param groupId - The group to export
  * @param filter - Filter contacts by validation status
  */
-export function getExportUrl(
+export async function exportGroupContacts(
     groupId: string,
     filter: 'all' | 'valid' | 'invalid' | 'pending' = 'all'
-): string {
-    // Return full URL for direct download
-    return `/api/v1/groups/${groupId}/export?filter=${filter}`;
+): Promise<void> {
+    const url = `${config.apiUrl}/groups/${groupId}/export?filter=${filter}`;
+
+    // Get auth token from localStorage
+    const token = typeof window !== 'undefined'
+        ? localStorage.getItem('sms_auth_token')
+        : null;
+
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(`Export failed: ${response.statusText}`);
+    }
+
+    // Get filename from Content-Disposition header or use default
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = `group_${groupId}_${filter}.csv`;
+    if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+        if (match) {
+            filename = match[1];
+        }
+    }
+
+    // Convert to blob and trigger download
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
 }
 
 export const groupsApi = {
@@ -158,5 +201,5 @@ export const groupsApi = {
     getGroupContacts,
     startGroupValidation,
     getValidationStatus,
-    getExportUrl
+    exportGroupContacts
 };
