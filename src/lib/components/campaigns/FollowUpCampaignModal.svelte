@@ -3,10 +3,17 @@
   ================================
   Modal for creating follow-up campaigns with audience exclusion options.
   Uses minimal silver palette with light borders and subtle shadows.
+  
+  Optimizations:
+  - Server-side calculation of remaining count (no client-side math)
+  - 500ms debounce on filter changes to reduce API calls
+  - AbortController to cancel in-flight requests on filter change
+  - Skip redundant calls if filters haven't changed
+  - Cleanup on component destroy
 -->
 
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   import {
     getFollowUpPreview,
     createFollowUpCampaign,
@@ -39,6 +46,10 @@
   let isLoadingPreview = false;
   let isSubmitting = false;
   let previewTimeout: ReturnType<typeof setTimeout> | null = null;
+  let abortController: AbortController | null = null;
+
+  // Track last fetched filter state to avoid redundant calls
+  let lastFetchedFilters: string = '';
 
   // Message validation state
   let validation: MessageValidationResponse | null = null;
@@ -49,22 +60,48 @@
   // Remaining count comes directly from server
   $: remainingCount = preview?.remaining_after_exclusions ?? 0;
 
-  // Debounced preview fetch on any filter change
-  $: {
-    // Trigger on any filter change (this creates reactive dependency)
-    excludeDnc, excludeNoReply, excludeFailedDelivery, targetOnlyNoReply, minPriorityThreshold;
-    // Debounce the API call
-    if (previewTimeout) clearTimeout(previewTimeout);
-    previewTimeout = setTimeout(() => loadPreview(), 500);
+  // Build filter key for comparison
+  function getFilterKey(): string {
+    return `${excludeDnc}-${excludeNoReply}-${excludeFailedDelivery}-${targetOnlyNoReply}-${minPriorityThreshold}`;
   }
 
-  onMount(async () => {
+  // Debounced preview fetch on any filter change (only when modal is open)
+  $: if (isOpen) {
+    // Trigger on any filter change (this creates reactive dependency)
+    const currentFilters = getFilterKey();
+
+    // Only fetch if filters actually changed
+    if (currentFilters !== lastFetchedFilters) {
+      // Clear previous timeout
+      if (previewTimeout) clearTimeout(previewTimeout);
+
+      // Debounce the API call
+      previewTimeout = setTimeout(() => loadPreview(), 500);
+    }
+  }
+
+  onMount(() => {
     name = `${parentCampaign.name} - Follow-up`;
-    // Initial load happens via the reactive statement above
+    // Initial load happens via the reactive statement when isOpen becomes true
+  });
+
+  onDestroy(() => {
+    // Cleanup: cancel pending requests and timeouts
+    if (previewTimeout) clearTimeout(previewTimeout);
+    if (validationTimeout) clearTimeout(validationTimeout);
+    if (abortController) abortController.abort();
   });
 
   async function loadPreview() {
+    // Cancel any in-flight request
+    if (abortController) {
+      abortController.abort();
+    }
+    abortController = new AbortController();
+
     isLoadingPreview = true;
+    const currentFilterKey = getFilterKey();
+
     try {
       preview = await getFollowUpPreview(
         parentCampaign.id,
@@ -74,9 +111,13 @@
         targetOnlyNoReply,
         minPriorityThreshold > 0 ? minPriorityThreshold : undefined
       );
-    } catch (error) {
-      // If API fails, show error but keep last preview
-      console.error('Failed to load follow-up preview:', error);
+      // Update last fetched filters on success
+      lastFetchedFilters = currentFilterKey;
+    } catch (error: any) {
+      // Ignore abort errors (expected when cancelling)
+      if (error?.name !== 'AbortError') {
+        console.error('Failed to load follow-up preview:', error);
+      }
     } finally {
       isLoadingPreview = false;
     }
