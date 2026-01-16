@@ -222,6 +222,7 @@ export interface FollowUpPreviewResponse {
     no_reply_count: number;
     failed_delivery_count: number;
     priority_breakdown: Record<string, number>;
+    priority_excluded_count: number;
     remaining_after_exclusions: number;
 }
 

@@ -30,14 +30,15 @@
   let scheduledAt = '';
   let excludeDnc = true;
   let excludeNoReply = false;
-  let excludeFailedDelivery = true; // New: exclude failed deliveries by default
-  let targetOnlyNoReply = false; // New: target ONLY non-responders (mutually exclusive with excludeNoReply)
+  let excludeFailedDelivery = true; // Exclude failed deliveries by default
+  let targetOnlyNoReply = false; // Target ONLY non-responders (mutually exclusive with excludeNoReply)
   let minPriorityThreshold = 0; // 0 = include all, 1 = exclude 0, 2 = exclude 0-1, 3 = exclude 0-2
 
   // Preview state
   let preview: FollowUpPreviewResponse | null = null;
   let isLoadingPreview = false;
   let isSubmitting = false;
+  let previewTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Message validation state
   let validation: MessageValidationResponse | null = null;
@@ -45,59 +46,21 @@
   let validationTimeout: ReturnType<typeof setTimeout> | null = null;
   let allowExpensiveEncoding = false;
 
-  // Computed remaining count
-  $: remainingCount = computeRemainingCount(
-    preview,
-    excludeDnc,
-    excludeNoReply,
-    excludeFailedDelivery,
-    targetOnlyNoReply,
-    minPriorityThreshold
-  );
+  // Remaining count comes directly from server
+  $: remainingCount = preview?.remaining_after_exclusions ?? 0;
 
-  // Compute excluded count for the priority slider
-  $: priorityExcludedCount = computePriorityExcluded(preview, minPriorityThreshold);
-
-  function computePriorityExcluded(p: FollowUpPreviewResponse | null, threshold: number): number {
-    if (!p || threshold === 0) return 0;
-    let count = 0;
-    for (let i = 0; i < threshold; i++) {
-      count += p.priority_breakdown[String(i)] || 0;
-    }
-    return count;
-  }
-
-  function computeRemainingCount(
-    p: FollowUpPreviewResponse | null,
-    dnc: boolean,
-    noReply: boolean,
-    failedDelivery: boolean,
-    onlyNoReply: boolean,
-    threshold: number
-  ): number {
-    if (!p) return 0;
-    let excluded = 0;
-    if (dnc) excluded += p.dnc_count;
-
-    // No Reply logic: either exclude or target only non-responders
-    if (noReply) {
-      excluded += p.no_reply_count;
-    } else if (onlyNoReply) {
-      // If targeting only non-responders, exclude those who DID reply
-      // (original - no_reply = replied count)
-      excluded += p.original_recipients - p.no_reply_count;
-    }
-
-    if (failedDelivery) excluded += p.failed_delivery_count;
-
-    // Exclude contacts below the threshold
-    excluded += computePriorityExcluded(p, threshold);
-    return Math.max(0, p.original_recipients - excluded);
+  // Debounced preview fetch on any filter change
+  $: {
+    // Trigger on any filter change (this creates reactive dependency)
+    excludeDnc, excludeNoReply, excludeFailedDelivery, targetOnlyNoReply, minPriorityThreshold;
+    // Debounce the API call
+    if (previewTimeout) clearTimeout(previewTimeout);
+    previewTimeout = setTimeout(() => loadPreview(), 500);
   }
 
   onMount(async () => {
     name = `${parentCampaign.name} - Follow-up`;
-    await loadPreview();
+    // Initial load happens via the reactive statement above
   });
 
   async function loadPreview() {
@@ -108,26 +71,12 @@
         excludeDnc,
         excludeNoReply,
         excludeFailedDelivery,
-        targetOnlyNoReply
+        targetOnlyNoReply,
+        minPriorityThreshold > 0 ? minPriorityThreshold : undefined
       );
     } catch (error) {
-      // If API doesn't exist yet, use mock data
-      console.warn('Follow-up preview API not available, using mock data');
-      preview = {
-        parent_campaign_id: parentCampaign.id,
-        parent_campaign_name: parentCampaign.name,
-        original_recipients: parentCampaign.total_recipients,
-        dnc_count: Math.floor(parentCampaign.total_recipients * 0.15),
-        no_reply_count: Math.floor(parentCampaign.total_recipients * 0.45),
-        failed_delivery_count: Math.floor(parentCampaign.total_recipients * 0.08),
-        priority_breakdown: {
-          '0': Math.floor(parentCampaign.total_recipients * 0.05),
-          '1': Math.floor(parentCampaign.total_recipients * 0.1),
-          '2': Math.floor(parentCampaign.total_recipients * 0.35),
-          '3': Math.floor(parentCampaign.total_recipients * 0.5)
-        },
-        remaining_after_exclusions: Math.floor(parentCampaign.total_recipients * 0.4)
-      };
+      // If API fails, show error but keep last preview
+      console.error('Failed to load follow-up preview:', error);
     } finally {
       isLoadingPreview = false;
     }
@@ -500,7 +449,9 @@
                 <span
                   class="text-sm font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg"
                 >
-                  {isLoadingPreview ? '...' : priorityExcludedCount.toLocaleString()} excluded
+                  {isLoadingPreview
+                    ? '...'
+                    : (preview?.priority_excluded_count ?? 0).toLocaleString()} excluded
                 </span>
               </div>
 
