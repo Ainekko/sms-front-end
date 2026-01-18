@@ -5,6 +5,7 @@
  * 
  * This module provides:
  * - Get all conversations via GET /api/v1/messages/conversations
+ * - Filter options for DNC, archived, and priority
  * 
  * Usage:
  *   import { conversationsApi } from '$lib/api/conversations';
@@ -53,6 +54,23 @@ export interface ConversationResponse {
     ai_do_not_contact?: boolean;
 }
 
+/**
+ * Filter options for conversations list.
+ * These map to backend query parameters for efficient filtering.
+ */
+export interface ConversationFilterOptions {
+    /** Include do-not-contact contacts (default: false to save bandwidth) */
+    includeDnc?: boolean;
+    /** Include archived contacts (default: false) */
+    includeArchived?: boolean;
+    /** Minimum AI priority to include (0-3) */
+    minPriority?: number;
+    /** Maximum number of conversations to return (for pagination) */
+    limit?: number;
+    /** Number of conversations to skip (for pagination) */
+    offset?: number;
+}
+
 // =============================================================================
 // API Functions
 // =============================================================================
@@ -73,13 +91,41 @@ export async function getAllConversations(brandId?: string): Promise<Conversatio
 }
 
 /**
- * Get conversations for a specific brand.
+ * Get conversations for a specific brand with optional filters.
  * 
  * @param brandId - Brand ID to get conversations for
+ * @param options - Filter options (DNC, archived, priority)
  * @returns Promise resolving to array of conversation summaries
  */
-export async function getConversationsByBrand(brandId: string): Promise<ConversationResponse[]> {
-    return api.get<ConversationResponse[]>(`/messages/conversations/brand/${brandId}`);
+export async function getConversationsByBrand(
+    brandId: string,
+    options: ConversationFilterOptions = {}
+): Promise<ConversationResponse[]> {
+    // Build query params from filter options
+    const params = new URLSearchParams();
+
+    // Default to excluding DNC unless explicitly requested
+    params.append('include_dnc', String(options.includeDnc ?? false));
+
+    // Default to excluding archived
+    params.append('include_archived', String(options.includeArchived ?? false));
+
+    // Add min priority if specified
+    if (options.minPriority !== undefined) {
+        params.append('min_priority', String(options.minPriority));
+    }
+
+    // Add pagination params (default: 50 per page)
+    params.append('limit', String(options.limit ?? 50));
+    if (options.offset !== undefined && options.offset > 0) {
+        params.append('offset', String(options.offset));
+    }
+
+    const queryString = params.toString();
+    const endpoint = `/messages/conversations/brand/${brandId}?${queryString}`;
+
+    console.log('[Conversations] Fetching with filters:', endpoint);
+    return api.get<ConversationResponse[]>(endpoint);
 }
 
 /**
@@ -89,3 +135,4 @@ export const conversationsApi = {
     getAllConversations,
     getConversationsByBrand,
 };
+

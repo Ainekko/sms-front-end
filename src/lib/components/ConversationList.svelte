@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { onMount, createEventDispatcher } from 'svelte';
+  import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import {
     conversationsStore,
     selectedConversationId,
     selectConversation,
     loadConversations,
+    loadMoreConversations,
     type ConversationSummary
   } from '../stores/conversationsStore';
   import { archiveContact, unarchiveContact } from '$lib/api/contacts';
@@ -34,6 +35,8 @@
   // ==========================================================================
 
   let searchQuery = '';
+  let loadMoreSentinel: HTMLDivElement;
+  let observer: IntersectionObserver | null = null;
   const dispatch = createEventDispatcher();
 
   // ==========================================================================
@@ -43,8 +46,59 @@
   // Use custom conversations if provided, otherwise use store
   $: rawConversations = customConversations ?? $conversationsStore.conversations;
   $: effectiveLoading = mode === 'campaign' ? isLoading : $conversationsStore.isLoading;
+  $: isLoadingMore = mode === 'campaign' ? false : $conversationsStore.isLoadingMore;
+  $: hasMore = mode === 'campaign' ? false : $conversationsStore.hasMore;
   $: error = mode === 'campaign' ? null : $conversationsStore.error;
   $: selectedId = $selectedConversationId;
+
+  // ==========================================================================
+  // Infinite Scroll Setup
+  // ==========================================================================
+
+  /**
+   * Set up IntersectionObserver to load more when user scrolls near the end.
+   * Triggers when the sentinel element (placed 5 items from bottom) becomes visible.
+   */
+  function setupScrollObserver() {
+    if (mode !== 'default' || !brandId) return;
+
+    // Clean up existing observer
+    if (observer) {
+      observer.disconnect();
+    }
+
+    observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && hasMore && !isLoadingMore && !effectiveLoading && brandId) {
+          console.log('[ConversationList] Sentinel visible, loading more...');
+          loadMoreConversations(brandId);
+        }
+      },
+      {
+        root: null, // viewport
+        rootMargin: '200px', // Load early for smooth scrolling
+        threshold: 0
+      }
+    );
+
+    // Observe the sentinel element if it exists
+    if (loadMoreSentinel) {
+      observer.observe(loadMoreSentinel);
+    }
+  }
+
+  // Re-setup observer when conversations change (sentinel might have moved)
+  $: if (filteredConversations.length > 0 && loadMoreSentinel && mode === 'default') {
+    setupScrollObserver();
+  }
+
+  // Cleanup observer on destroy
+  onDestroy(() => {
+    if (observer) {
+      observer.disconnect();
+    }
+  });
 
   $: {
     if (mode === 'campaign') {
@@ -144,18 +198,53 @@
   // ==========================================================================
 
   let lastLoadedBrandId: string | null | undefined;
+  let lastLoadedFolder: string | undefined;
+
+  /**
+   * Reload conversations with appropriate backend filters based on the current folder.
+   * This ensures we only fetch DNC/archived data when explicitly viewing those tabs.
+   */
+  function reloadWithFilters(brand: string, folder: string) {
+    const filters = {
+      includeDnc: folder === 'dnc',
+      includeArchived: folder === 'archived',
+      minPriority: undefined
+    };
+    console.log(`[ConversationList] Reloading for folder "${folder}" with filters:`, filters);
+    loadConversations(brand, filters);
+  }
 
   // Only load conversations when we have a valid brandId
-  // This prevents loading all conversations when no brand is selected
+  // Also reload when folder changes to dnc or archived (requires different API params)
   $: if (mode === 'default') {
-    if (brandId && brandId !== lastLoadedBrandId) {
+    if (brandId && (brandId !== lastLoadedBrandId || activeFolder !== lastLoadedFolder)) {
+      const previousFolder = lastLoadedFolder;
+      const folderChanged = previousFolder !== activeFolder;
+      const brandChanged = brandId !== lastLoadedBrandId;
+
+      // Update tracking BEFORE the reload check
       lastLoadedBrandId = brandId;
-      loadConversations(brandId);
+      lastLoadedFolder = activeFolder;
+
+      // Reload if:
+      // 1. Brand changed (always reload with current folder's filters)
+      // 2. Folder changed TO dnc/archived (need to fetch that data)
+      // 3. Folder changed FROM dnc/archived (need to reload without those filters)
+      const needsReload =
+        brandChanged ||
+        (folderChanged &&
+          (activeFolder === 'dnc' ||
+            activeFolder === 'archived' ||
+            previousFolder === 'dnc' ||
+            previousFolder === 'archived'));
+
+      if (needsReload) {
+        reloadWithFilters(brandId, activeFolder);
+      }
     } else if (!brandId && lastLoadedBrandId) {
-      // Brand was cleared - don't load all conversations, just reset
+      // Brand was cleared - reset tracking
       lastLoadedBrandId = undefined;
-      // Optionally clear conversations to prevent stale data
-      // conversationsStore.reset();
+      lastLoadedFolder = undefined;
     }
   }
 
@@ -498,6 +587,40 @@
           </div>
         </div>
       {/each}
+
+      <!-- Infinite Scroll Sentinel - triggers load when visible -->
+      {#if mode === 'default' && hasMore && filteredConversations.length > 0}
+        <div bind:this={loadMoreSentinel} class="h-4 w-full" aria-hidden="true" />
+      {/if}
+
+      <!-- Loading More Indicator -->
+      {#if isLoadingMore}
+        <div class="flex items-center justify-center py-4">
+          <div class="flex items-center space-x-2 text-gray-500">
+            <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            <span class="text-sm">Loading more...</span>
+          </div>
+        </div>
+      {/if}
+
+      <!-- End of List Indicator (when no more to load) -->
+      {#if mode === 'default' && !hasMore && filteredConversations.length > 0}
+        <div class="text-center py-3 text-xs text-gray-400">All conversations loaded</div>
+      {/if}
     {/if}
   </div>
 </div>
