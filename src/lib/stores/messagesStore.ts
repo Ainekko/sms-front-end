@@ -55,7 +55,19 @@ export type MessageStatus =
 export type MessageDirection = 'inbound' | 'outbound';
 
 /**
- * Represents a single SMS message in a conversation.
+ * A media attachment from an MMS message.
+ */
+export interface MediaAttachment {
+    /** Index of the media item (0-based) */
+    index: number;
+    /** MIME content type (e.g., 'image/jpeg') */
+    contentType: string;
+    /** Proxy URL to fetch the media */
+    url: string;
+}
+
+/**
+ * Represents a single SMS/MMS message in a conversation.
  */
 export interface Message {
     /** Unique identifier for the message (usually Twilio SID) */
@@ -81,6 +93,9 @@ export interface Message {
 
     /** When the message was created/received */
     createdAt: Date;
+
+    /** MMS media attachments (images, videos, etc.) */
+    media?: MediaAttachment[];
 }
 
 /**
@@ -354,7 +369,12 @@ export async function loadMessages(phoneNumber: string, brandId?: string): Promi
             body: item.body,
             direction: item.direction as MessageDirection,
             status: item.status as MessageStatus,
-            createdAt: new Date(item.created_at)
+            createdAt: new Date(item.created_at),
+            media: item.media?.map(m => ({
+                index: m.index,
+                contentType: m.content_type,
+                url: m.url
+            }))
         }));
 
         // Check if there might be more messages
@@ -401,7 +421,12 @@ export async function loadMoreMessages(): Promise<void> {
             body: item.body,
             direction: item.direction as MessageDirection,
             status: item.status as MessageStatus,
-            createdAt: new Date(item.created_at)
+            createdAt: new Date(item.created_at),
+            media: item.media?.map(m => ({
+                index: m.index,
+                contentType: m.content_type,
+                url: m.url
+            }))
         }));
 
         const hasMore = messages.length === PAGE_SIZE;
@@ -472,7 +497,12 @@ export function addReceivedMessage(messageData: any): void {
         body: messageData.body,
         direction: messageData.direction as MessageDirection,
         status: messageData.status as MessageStatus,
-        createdAt: new Date(messageData.created_at)
+        createdAt: new Date(messageData.created_at),
+        media: messageData.media?.map((m: any) => ({
+            index: m.index,
+            contentType: m.content_type,
+            url: m.url
+        }))
     };
 
     messagesStore.addMessage(message);

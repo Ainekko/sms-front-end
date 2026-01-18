@@ -8,6 +8,7 @@
   import { afterUpdate } from 'svelte';
   import { messagesStore, loadMessages, sendMessage } from '../../stores/messagesStore';
   import { showError } from '../../stores/uiStore';
+  import { config } from '../../config';
   import MessageInput from '../MessageInput.svelte';
 
   export let conversationId: string | null = null;
@@ -16,6 +17,10 @@
 
   let chatContainer: HTMLElement;
   let shouldScrollToBottom = true;
+
+  /** Lightbox state for viewing images full-size */
+  let lightboxOpen = false;
+  let lightboxUrl = '';
 
   $: messages = $messagesStore.messages;
   $: isLoading = $messagesStore.isLoading;
@@ -104,6 +109,26 @@
       loadMessages(conversationId, brandId || undefined);
     }
   }
+
+  /**
+   * Build full media URL from the relative API path.
+   */
+  function getMediaUrl(url: string): string {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `${config.apiBaseUrl}${url}`;
+  }
+
+  function openLightbox(url: string): void {
+    lightboxUrl = getMediaUrl(url);
+    lightboxOpen = true;
+  }
+
+  function closeLightbox(): void {
+    lightboxOpen = false;
+    lightboxUrl = '';
+  }
 </script>
 
 <div class="flex flex-col h-full bg-gray-50 border-l border-gray-200">
@@ -150,7 +175,69 @@
                 ? 'bg-blue-600 text-white rounded-l-2xl rounded-tr-2xl'
                 : 'bg-white text-gray-800 border border-gray-200 rounded-r-2xl rounded-tl-2xl'} px-3 py-2 shadow-sm"
             >
-              <p class="text-sm whitespace-pre-wrap break-words">{message.body}</p>
+              <!-- MMS Media Attachments -->
+              {#if message.media && message.media.length > 0}
+                <div class="mb-2 space-y-2">
+                  {#each message.media as attachment}
+                    {#if attachment.contentType.startsWith('image/')}
+                      <!-- Image attachment -->
+                      <a
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="block"
+                      >
+                        <img
+                          src={attachment.url}
+                          alt="MMS attachment"
+                          class="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          style="max-height: 200px; object-fit: contain;"
+                          loading="lazy"
+                        />
+                      </a>
+                    {:else if attachment.contentType.startsWith('video/')}
+                      <!-- Video attachment -->
+                      <video
+                        src={attachment.url}
+                        controls
+                        class="max-w-full rounded-lg"
+                        style="max-height: 200px;"
+                        preload="metadata"
+                      >
+                        <track kind="captions" src="" label="No captions available" />
+                        Your browser does not support the video tag.
+                      </video>
+                    {:else}
+                      <!-- Other file types -->
+                      <a
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex items-center gap-2 p-2 rounded-lg {message.direction ===
+                        'outbound'
+                          ? 'bg-blue-500'
+                          : 'bg-gray-100'} hover:opacity-80"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        <span class="text-xs">Attachment</span>
+                      </a>
+                    {/if}
+                  {/each}
+                </div>
+              {/if}
+
+              <!-- Message Body -->
+              {#if message.body}
+                <p class="text-sm whitespace-pre-wrap break-words">{message.body}</p>
+              {/if}
+
               <div class="flex items-center justify-end space-x-1 mt-1">
                 <span class="text-[10px] opacity-70">{formatMessageTime(message.createdAt)}</span>
                 {#if message.direction === 'outbound'}

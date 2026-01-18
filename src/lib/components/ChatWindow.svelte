@@ -27,6 +27,7 @@
   import { selectedConversationId, selectedConversation } from '../stores/conversationsStore';
   import { selectedBrand } from '../stores/brandsStore';
   import { showError, showSuccess } from '../stores/uiStore';
+  import { config } from '../config';
 
   // Import sub-components
   import MessageInput from './MessageInput.svelte';
@@ -40,6 +41,10 @@
 
   /** Whether we should scroll on next update */
   let shouldScrollToBottom = true;
+
+  /** Lightbox state for viewing images full-size */
+  let lightboxOpen = false;
+  let lightboxUrl = '';
 
   // ==========================================================================
   // Reactive State
@@ -199,6 +204,36 @@
       loadMessages(selectedId);
     }
   }
+
+  /**
+   * Build full media URL from the relative API path.
+   * The backend returns paths like /api/v1/messages/{id}/media/{index}
+   * We need to prefix with the backend base URL.
+   */
+  function getMediaUrl(url: string): string {
+    // If already absolute, return as is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    // Prefix with backend base URL
+    return `${config.apiBaseUrl}${url}`;
+  }
+
+  /**
+   * Open the lightbox with a specific image URL.
+   */
+  function openLightbox(url: string): void {
+    lightboxUrl = getMediaUrl(url);
+    lightboxOpen = true;
+  }
+
+  /**
+   * Close the lightbox.
+   */
+  function closeLightbox(): void {
+    lightboxOpen = false;
+    lightboxUrl = '';
+  }
 </script>
 
 <!-- Chat Window Container -->
@@ -326,8 +361,67 @@
                 : 'bg-white text-gray-800 border border-gray-200 rounded-r-2xl rounded-tl-2xl'} 
                                 px-4 py-3 shadow-sm"
             >
+              <!-- MMS Media Attachments -->
+              {#if message.media && message.media.length > 0}
+                <div class="mb-2 space-y-2">
+                  {#each message.media as attachment}
+                    {#if attachment.contentType.startsWith('image/')}
+                      <!-- Image attachment - click to open lightbox -->
+                      <button
+                        type="button"
+                        class="block w-full text-left"
+                        on:click={() => openLightbox(attachment.url)}
+                      >
+                        <img
+                          src={getMediaUrl(attachment.url)}
+                          alt="MMS attachment"
+                          class="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          style="max-height: 300px; object-fit: contain;"
+                          loading="lazy"
+                        />
+                      </button>
+                    {:else if attachment.contentType.startsWith('video/')}
+                      <!-- Video attachment -->
+                      <video
+                        src={getMediaUrl(attachment.url)}
+                        controls
+                        class="max-w-full rounded-lg"
+                        style="max-height: 300px;"
+                        preload="metadata"
+                      >
+                        <track kind="captions" src="" label="No captions available" />
+                        Your browser does not support the video tag.
+                      </video>
+                    {:else}
+                      <!-- Other file types -->
+                      <a
+                        href={getMediaUrl(attachment.url)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="flex items-center gap-2 p-2 rounded-lg {message.direction ===
+                        'outbound'
+                          ? 'bg-blue-500'
+                          : 'bg-gray-100'} hover:opacity-80"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        <span class="text-sm">Attachment</span>
+                      </a>
+                    {/if}
+                  {/each}
+                </div>
+              {/if}
+
               <!-- Message Body -->
-              <p class="text-sm whitespace-pre-wrap break-words">{message.body}</p>
+              {#if message.body}
+                <p class="text-sm whitespace-pre-wrap break-words">{message.body}</p>
+              {/if}
 
               <!-- Timestamp and Status -->
               <div class="flex items-center justify-end space-x-1 mt-1">
@@ -383,3 +477,39 @@
     </div>
   {/if}
 </div>
+
+<!-- Image Lightbox Modal -->
+{#if lightboxOpen}
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+    role="dialog"
+    aria-modal="true"
+    on:click={closeLightbox}
+    on:keydown={(e) => e.key === 'Escape' && closeLightbox()}
+  >
+    <!-- Close button -->
+    <button
+      type="button"
+      class="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+      on:click={closeLightbox}
+      aria-label="Close image"
+    >
+      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M6 18L18 6M6 6l12 12"
+        />
+      </svg>
+    </button>
+
+    <!-- Full-size image -->
+    <img
+      src={lightboxUrl}
+      alt="Full size image"
+      class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+      on:click|stopPropagation
+    />
+  </div>
+{/if}

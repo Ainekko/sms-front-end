@@ -42,6 +42,18 @@ export interface SendMessageResponse {
 }
 
 /**
+ * A media attachment from an MMS message.
+ */
+export interface MediaAttachment {
+    /** Index of the media item (0-based) */
+    index: number;
+    /** MIME content type (e.g., 'image/jpeg') */
+    content_type: string;
+    /** Proxy URL to fetch the media */
+    url: string;
+}
+
+/**
  * A single message from the API.
  */
 export interface MessageResponse {
@@ -53,6 +65,8 @@ export interface MessageResponse {
     direction: string;
     status: string;
     created_at: string;
+    /** Optional MMS media attachments */
+    media?: MediaAttachment[] | null;
 }
 
 /**
