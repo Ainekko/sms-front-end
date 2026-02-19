@@ -1,447 +1,409 @@
-<!--
-  Chloe Calls Page
-  ================
-  Master-detail view for viewing Retell.ai call recordings.
-  Design inspired by the groups page for consistency.
--->
-
 <script lang="ts">
+  /**
+   * Dashboard Page
+   * ==============
+   * Master dashboard displaying recent Chloe calls.
+   * Design matching Chloe V1, utilizing existing backend fields.
+   */
   import { onMount } from 'svelte';
-  import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { authStore, isAuthenticated, isAuthInitialized, currentUser } from '$lib/stores';
   import { chloeApi, type ChloeCall } from '$lib/api/chloe';
-  import { showError } from '$lib/stores/uiStore';
+  import Card from './components/Card.svelte';
+  import Button from './components/Button.svelte';
+  import Badge from './components/Badge.svelte';
+  import Spinner from './components/Spinner.svelte';
+
+  // Auth guard
+  $: if ($isAuthInitialized && !$isAuthenticated) {
+    goto('/login');
+  }
 
   // State
-  let calls: ChloeCall[] = [];
-  let selectedCall: ChloeCall | null = null;
-  let isLoading = true;
-  let searchQuery = '';
-
-  // Filtered calls
-  $: filteredCalls = calls.filter((c) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      c.call_id.toLowerCase().includes(q) ||
-      (c.transcript && c.transcript.toLowerCase().includes(q)) ||
-      (c.call_summary && c.call_summary.toLowerCase().includes(q))
-    );
-  });
-
-  // URL State Management
-  $: selectedCallId = $page.url.searchParams.get('id');
-
-  $: if (selectedCallId && calls.length > 0) {
-    const call = calls.find((c) => c.call_id === selectedCallId);
-    if (call && selectedCall?.call_id !== call.call_id) {
-      selectedCall = call;
-    }
-  } else if (!selectedCallId) {
-    selectedCall = null;
-  }
+  let recentCalls: ChloeCall[] = [];
+  let loadingCalls = true;
+  let expandedCallId: string | null = null;
 
   onMount(async () => {
-    await loadCalls();
+    try {
+      recentCalls = await chloeApi.listCalls(50, 0);
+    } catch (e) {
+      recentCalls = [];
+      console.error('Failed to load calls:', e);
+    } finally {
+      loadingCalls = false;
+    }
   });
 
-  async function loadCalls() {
-    isLoading = true;
-    try {
-      calls = await chloeApi.listCalls();
-      
-      // If ID in URL, select it
-      if (selectedCallId) {
-        const call = calls.find((c) => c.call_id === selectedCallId);
-        if (call) {
-          selectedCall = call;
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load calls:', err);
-      showError('Failed to load calls');
-    } finally {
-      isLoading = false;
-    }
+  function handleLogout() {
+    authStore.logout();
+    goto('/login');
   }
 
-  function selectCall(call: ChloeCall) {
-    selectedCall = call;
-    const url = new URL(window.location.href);
-    url.searchParams.set('id', call.call_id);
-    goto(url.toString(), { keepFocus: true, noScroll: true });
+  function toggleCallDetail(callId: string) {
+    expandedCallId = expandedCallId === callId ? null : callId;
   }
 
-  function handleBack() {
-    goto('/messages');
-  }
+  // ─── Helpers ───────────────────────────────────────────────────────────────
 
   function formatDuration(ms: number | null): string {
-    if (!ms) return '-';
+    if (!ms) return '--';
     const seconds = Math.floor(ms / 1000);
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  function formatDate(dateStr: string): string {
+  function formatTime(dateStr: string): string {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
   }
 
-  function getSentimentColor(sentiment: string | null): string {
-    switch (sentiment?.toLowerCase()) {
-      case 'positive':
-        return 'bg-emerald-100 text-emerald-700';
-      case 'negative':
-        return 'bg-red-100 text-red-700';
-      default:
-        return 'bg-blue-100 text-blue-700';
-    }
+  function getSentimentVariant(
+    sentiment: string | null
+  ): 'success' | 'warning' | 'error' | 'neutral' {
+    if (!sentiment) return 'neutral';
+    const s = sentiment.toLowerCase();
+    if (s === 'positive') return 'success';
+    if (s === 'negative') return 'error';
+    return 'neutral';
   }
 
-  function getStatusColor(successful: boolean | null): string {
-    if (successful === true) return 'bg-emerald-100 text-emerald-700';
-    if (successful === false) return 'bg-red-100 text-red-700';
-    return 'bg-gray-100 text-gray-600';
+  function getCallerDisplay(call: ChloeCall): { name: string; sub: string | null } {
+    const defaultNumber = call.direction === 'outbound' ? call.to_number : call.from_number;
+    return { name: defaultNumber || 'Unknown Caller', sub: null };
   }
 </script>
 
-<div class="flex h-screen bg-gray-50 font-sans overflow-hidden">
-  <!-- Sidebar -->
-  <aside
-    class="w-80 bg-white border-r border-gray-200 flex flex-col z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]"
-  >
-    <!-- Header -->
-    <div class="p-6 border-b border-gray-100">
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center space-x-3">
-          <button
-            class="p-2 -ml-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
-            on:click={handleBack}
-            title="Back to Messages"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-          </button>
-          <h1 class="text-xl font-bold text-gray-900 tracking-tight">Chloe Calls</h1>
-        </div>
-        <!-- Phone icon -->
-        <div class="p-2 text-indigo-600 bg-indigo-50 rounded-xl">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-            />
-          </svg>
-        </div>
-      </div>
+<svelte:head>
+  <title>Dashboard | Chloe</title>
+</svelte:head>
 
-      <!-- Search -->
-      <div class="relative group">
-        <svg
-          class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2 group-focus-within:text-indigo-500 transition-colors"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-          />
-        </svg>
-        <input
-          type="text"
-          bind:value={searchQuery}
-          placeholder="Search calls..."
-          class="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-xl text-sm font-medium text-gray-900
-                 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all"
-        />
-      </div>
-    </div>
-
-    <!-- Call List -->
-    <div class="flex-1 overflow-y-auto p-4 space-y-2">
-      {#if isLoading}
-        <div class="flex justify-center py-12">
-          <div
-            class="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"
-          ></div>
-        </div>
-      {:else if calls.length === 0}
-        <div class="text-center py-12 px-4">
-          <div
-            class="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4"
-          >
+{#if !$isAuthInitialized}
+  <div class="min-h-screen flex items-center justify-center bg-zinc-50 text-zinc-900">
+    <Spinner size="lg" />
+  </div>
+{:else}
+  <div class="min-h-screen bg-zinc-50 text-zinc-900 font-sans">
+    <!-- Top Bar -->
+    <header class="sticky top-0 z-50 bg-white border-b border-zinc-200">
+      <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
             <svg
-              class="w-8 h-8 text-indigo-500"
+              class="w-4.5 h-4.5 text-white"
+              viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              viewBox="0 0 24 24"
+              stroke-width="2"
             >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                stroke-width="2"
+                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+              />
+            </svg>
+          </div>
+          <span class="text-base font-semibold text-zinc-900">Chloe</span>
+        </div>
+        <div class="flex items-center gap-4">
+          {#if $currentUser}
+            <span class="text-sm text-zinc-500">{$currentUser.email}</span>
+          {/if}
+          <Button variant="ghost" size="sm" on:click={handleLogout}>Logout</Button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-6 py-8">
+      <div class="mb-6 flex flex-col gap-1">
+        <h1 class="text-2xl font-bold text-zinc-900">Chloe Calls</h1>
+        <p class="text-sm text-zinc-500">
+          Review all your recent Chloe interactions and transcripts.
+        </p>
+      </div>
+
+      <!-- ═══════════════════════ Recent Calls Table ═══════════════════════ -->
+      <Card padding="p-0">
+        <div class="px-6 py-4 border-b border-zinc-100 flex items-center justify-between">
+          <h3 class="text-sm font-medium text-zinc-500">Recent Calls</h3>
+          <span class="text-xs text-zinc-400">{recentCalls.length} calls</span>
+        </div>
+
+        {#if loadingCalls}
+          <div class="flex items-center justify-center py-12">
+            <Spinner />
+          </div>
+        {:else if recentCalls.length === 0}
+          <div class="text-center py-12 text-sm text-zinc-400">
+            <svg
+              class="w-10 h-10 mx-auto mb-3 text-zinc-300"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
                 d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
               />
             </svg>
+            No calls yet. Wait for inbound or outbound interactions to occur.
           </div>
-          <p class="text-base font-semibold text-gray-900">No calls yet</p>
-          <p class="text-sm text-gray-500 mt-1">Calls from Chloe will appear here</p>
-        </div>
-      {:else if filteredCalls.length === 0}
-        <div class="text-center py-12">
-          <p class="text-gray-500">No calls match your search</p>
-        </div>
-      {:else}
-        {#each filteredCalls as call (call.id)}
-          <button
-            class="w-full flex items-center space-x-4 px-4 py-3.5 rounded-xl text-left transition-all duration-200 group relative overflow-hidden
-                   {selectedCall?.call_id === call.call_id ? 'bg-indigo-50 shadow-sm' : 'hover:bg-gray-50'}"
-            on:click={() => selectCall(call)}
-          >
-            {#if selectedCall?.call_id === call.call_id}
-              <div
-                class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-indigo-500 rounded-r-full"
-              ></div>
-            {/if}
+        {:else}
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">
+                  <th class="px-6 py-3 w-5"></th>
+                  <th class="px-6 py-3">Phone</th>
+                  <th class="px-6 py-3">Summary</th>
+                  <th class="px-6 py-3">Duration</th>
+                  <th class="px-6 py-3">Sentiment</th>
+                  <th class="px-6 py-3">Status</th>
+                  <th class="px-6 py-3">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each recentCalls as call (call.call_id)}
+                  {@const caller = getCallerDisplay(call)}
+                  {@const isExpanded = expandedCallId === call.call_id}
 
-            <!-- Call Icon -->
-            <div
-              class="flex-shrink-0 transition-transform duration-200 {selectedCall?.call_id === call.call_id
-                ? 'scale-110'
-                : 'group-hover:scale-105'}"
-            >
-              <div
-                class="w-10 h-10 rounded-lg flex items-center justify-center
-                          {selectedCall?.call_id === call.call_id
-                  ? 'bg-indigo-100 text-indigo-600'
-                  : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200 group-hover:text-gray-600'}"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between">
-                <p
-                  class="text-sm font-semibold truncate {selectedCall?.call_id === call.call_id
-                    ? 'text-gray-900'
-                    : 'text-gray-700'}"
-                >
-                  {formatDate(call.created_at)}
-                </p>
-                {#if call.user_sentiment}
-                  <span
-                    class="px-2 py-0.5 rounded-full text-xs font-medium {getSentimentColor(call.user_sentiment)}"
+                  <!-- Main row -->
+                  <tr
+                    class="border-t border-zinc-100 hover:bg-zinc-50/80 transition-colors cursor-pointer group"
+                    on:click={() => toggleCallDetail(call.call_id)}
                   >
-                    {call.user_sentiment}
-                  </span>
-                {/if}
-              </div>
-              <p
-                class="text-xs truncate mt-0.5 {selectedCall?.call_id === call.call_id
-                  ? 'text-indigo-600 font-medium'
-                  : 'text-gray-500'}"
-              >
-                {formatDuration(call.duration_ms)} • {call.call_type || 'Unknown'}
-              </p>
-            </div>
-          </button>
-        {/each}
-      {/if}
-    </div>
-  </aside>
+                    <!-- Expand chevron -->
+                    <td class="pl-5 pr-0 py-3.5">
+                      <svg
+                        class="w-4 h-4 text-zinc-400 transition-transform duration-200 {isExpanded
+                          ? 'rotate-90'
+                          : ''}"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </td>
 
-  <!-- Main Content -->
-  <main class="flex-1 flex flex-col min-w-0 bg-gray-50 relative overflow-hidden">
-    <!-- Background Decoration -->
-    <div
-      class="absolute top-0 right-0 w-full h-96 bg-gradient-to-b from-white to-transparent pointer-events-none"
-    ></div>
+                    <!-- Caller -->
+                    <td class="px-6 py-3.5">
+                      <div class="flex flex-col gap-1">
+                        <span class="text-sm font-medium text-zinc-900 font-mono"
+                          >{caller.name}</span
+                        >
+                      </div>
+                    </td>
 
-    {#if selectedCall}
-      <!-- Call Header -->
-      <div class="relative px-8 py-8 flex-shrink-0 z-10">
-        <div class="flex items-start justify-between">
-          <div>
-            <div class="flex items-center space-x-3 mb-2">
-              <h2 class="text-3xl font-bold text-gray-900 tracking-tight">Call Details</h2>
-              <span
-                class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wider"
-              >
-                {selectedCall.call_type || 'Call'}
-              </span>
-            </div>
-            <p class="text-gray-500 text-lg">
-              {formatDate(selectedCall.created_at)}
-            </p>
-          </div>
-          {#if selectedCall.recording_url}
-            <a
-              href={selectedCall.recording_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="px-4 py-2 text-sm font-medium text-indigo-600 bg-white border border-indigo-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm flex items-center space-x-2"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>Play Recording</span>
-            </a>
-          {/if}
-        </div>
+                    <!-- Summary -->
+                    <td class="px-6 py-3.5 max-w-xs">
+                      <p class="text-sm text-zinc-600 truncate" title={call.call_summary || ''}>
+                        {call.call_summary || '--'}
+                      </p>
+                    </td>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-4 gap-6 mt-8">
-          <div
-            class="bg-white p-6 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
-          >
-            <p class="text-sm font-medium text-gray-500 mb-1">Duration</p>
-            <p class="text-3xl font-bold text-gray-900">{formatDuration(selectedCall.duration_ms)}</p>
-          </div>
-          <div
-            class="bg-white p-6 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
-          >
-            <p class="text-sm font-medium text-gray-500 mb-1">Sentiment</p>
-            <div class="flex items-center space-x-2 mt-1">
-              <span
-                class="px-3 py-1 rounded-full text-sm font-semibold {getSentimentColor(selectedCall.user_sentiment)}"
-              >
-                {selectedCall.user_sentiment || 'Unknown'}
-              </span>
-            </div>
-          </div>
-          <div
-            class="bg-white p-6 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
-          >
-            <p class="text-sm font-medium text-gray-500 mb-1">Status</p>
-            <div class="flex items-center space-x-2 mt-1">
-              <span
-                class="px-3 py-1 rounded-full text-sm font-semibold {getStatusColor(selectedCall.call_successful)}"
-              >
-                {selectedCall.call_successful === true ? 'Successful' : selectedCall.call_successful === false ? 'Unsuccessful' : 'Unknown'}
-              </span>
-            </div>
-          </div>
-          <div
-            class="bg-white p-6 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100"
-          >
-            <p class="text-sm font-medium text-gray-500 mb-1">Disconnection</p>
-            <p class="text-lg font-semibold text-gray-900 capitalize">
-              {selectedCall.disconnection_reason?.replace(/_/g, ' ') || '-'}
-            </p>
-          </div>
-        </div>
-      </div>
+                    <!-- Duration -->
+                    <td class="px-6 py-3.5 text-sm text-zinc-600 font-mono">
+                      {formatDuration(call.duration_ms)}
+                    </td>
 
-      <!-- Call Content -->
-      <div class="flex-1 px-8 pb-8 overflow-y-auto z-10 space-y-6">
-        <!-- Summary Section -->
-        {#if selectedCall.call_summary}
-          <div
-            class="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100 p-6"
-          >
-            <h3 class="text-lg font-bold text-gray-900 mb-4">Summary</h3>
-            <p class="text-gray-700 leading-relaxed">{selectedCall.call_summary}</p>
+                    <!-- Sentiment -->
+                    <td class="px-6 py-3.5">
+                      <Badge variant={getSentimentVariant(call.user_sentiment)}>
+                        {call.user_sentiment || '--'}
+                      </Badge>
+                    </td>
+
+                    <!-- Status indicators -->
+                    <td class="px-6 py-3.5">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <Badge variant={call.call_successful ? 'success' : 'neutral'}>
+                          {call.call_successful ? 'Successful' : call.call_status || '--'}
+                        </Badge>
+                      </div>
+                    </td>
+
+                    <!-- Time -->
+                    <td class="px-6 py-3.5 text-sm text-zinc-400 whitespace-nowrap">
+                      {formatTime(call.created_at)}
+                    </td>
+                  </tr>
+
+                  <!-- ── Expandable Detail Row ────────────────────────────── -->
+                  {#if isExpanded}
+                    <tr>
+                      <td colspan="7" class="p-0 border-t border-zinc-100">
+                        <div class="px-6 py-5 bg-zinc-50/60 border-b border-zinc-100">
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                            <!-- Card 1: Call Details -->
+                            <div
+                              class="bg-white rounded-lg border border-zinc-200/60 p-4 shadow-sm"
+                            >
+                              <h4
+                                class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3"
+                              >
+                                Call Details
+                              </h4>
+                              <div class="space-y-2.5">
+                                <div class="flex items-center gap-2">
+                                  <svg
+                                    class="w-4 h-4 text-zinc-400 shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    ><path
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                    ></path></svg
+                                  >
+                                  <span class="text-sm text-zinc-700 font-mono"
+                                    >From: {call.from_number || '--'}</span
+                                  >
+                                </div>
+                                <div class="flex items-center gap-2">
+                                  <svg
+                                    class="w-4 h-4 text-zinc-400 shrink-0"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    ><path
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                    ></path></svg
+                                  >
+                                  <span class="text-sm text-zinc-700 font-mono"
+                                    >To: {call.to_number || '--'}</span
+                                  >
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Card 2: Technical Info -->
+                            <div
+                              class="bg-white rounded-lg border border-zinc-200/60 p-4 shadow-sm"
+                            >
+                              <h4
+                                class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3"
+                              >
+                                Technical Info
+                              </h4>
+                              <div class="space-y-2.5 text-sm">
+                                <div class="flex justify-between">
+                                  <span class="text-zinc-400">Direction</span>
+                                  <span class="text-zinc-700 capitalize"
+                                    >{call.direction || '--'}</span
+                                  >
+                                </div>
+                                <div class="flex justify-between">
+                                  <span class="text-zinc-400">Disconnection</span>
+                                  <span class="text-zinc-700"
+                                    >{call.disconnection_reason || '--'}</span
+                                  >
+                                </div>
+                                <div class="flex justify-between items-center">
+                                  <span class="text-zinc-400">Call ID</span>
+                                  <span
+                                    class="text-zinc-500 font-mono text-xs truncate max-w-[140px]"
+                                    title={call.call_id}>{call.call_id}</span
+                                  >
+                                </div>
+                                {#if call.recording_url}
+                                  <div class="pt-1">
+                                    <a
+                                      href={call.recording_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      class="inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:text-brand-700 transition-colors"
+                                    >
+                                      <svg
+                                        class="w-3.5 h-3.5"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                      >
+                                        <polygon points="5 3 19 12 5 21 5 3" />
+                                      </svg>
+                                      Play Recording
+                                    </a>
+                                  </div>
+                                {/if}
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- Transcript Block -->
+                          <div
+                            class="bg-white rounded-lg border border-zinc-200/60 overflow-hidden shadow-sm"
+                          >
+                            <div
+                              class="px-4 py-3 bg-zinc-50/80 border-b border-zinc-100 flex items-center gap-2"
+                            >
+                              <svg
+                                class="w-4 h-4 text-zinc-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                ><path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                                ></path></svg
+                              >
+                              <span
+                                class="text-xs font-semibold text-zinc-600 uppercase tracking-wider"
+                                >Full Transcript</span
+                              >
+                            </div>
+                            <div class="p-5 max-h-[400px] overflow-y-auto">
+                              {#if call.transcript}
+                                <p
+                                  class="text-sm text-zinc-600 font-mono leading-relaxed whitespace-pre-wrap"
+                                >
+                                  {call.transcript}
+                                </p>
+                              {:else}
+                                <p class="text-sm text-zinc-400 italic">
+                                  No transcript available for this call.
+                                </p>
+                              {/if}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  {/if}
+                {/each}
+              </tbody>
+            </table>
           </div>
         {/if}
+      </Card>
+    </main>
+  </div>
+{/if}
 
-        <!-- Transcript Section -->
-        <div
-          class="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100 flex-1 flex flex-col min-h-[300px]"
-        >
-          <div class="px-6 py-4 border-b border-gray-100">
-            <h3 class="text-lg font-bold text-gray-900">Transcript</h3>
-          </div>
-          <div class="flex-1 overflow-y-auto p-6">
-            {#if selectedCall.transcript}
-              <p class="text-gray-700 leading-relaxed whitespace-pre-wrap font-mono text-sm">
-                {selectedCall.transcript}
-              </p>
-            {:else}
-              <div class="flex flex-col items-center justify-center h-full text-center">
-                <div
-                  class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"
-                >
-                  <svg
-                    class="w-8 h-8 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                </div>
-                <p class="text-gray-500">No transcript available</p>
-              </div>
-            {/if}
-          </div>
-        </div>
-      </div>
-    {:else}
-      <!-- Empty State -->
-      <div class="flex-1 flex flex-col items-center justify-center text-center p-8 z-10">
-        <div
-          class="w-32 h-32 bg-white rounded-3xl flex items-center justify-center mb-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
-        >
-          <svg
-            class="w-16 h-16 text-indigo-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-            />
-          </svg>
-        </div>
-        <h3 class="text-2xl font-bold text-gray-900 mb-3">Select a Call</h3>
-        <p class="text-gray-500 max-w-md text-lg leading-relaxed">
-          Choose a call from the sidebar to view its details, transcript, and summary.
-        </p>
-      </div>
-    {/if}
-  </main>
-</div>
+<style>
+  /* Base styles for table hover states in case tailwind group-hover isn't enough */
+  :global(tr.group:hover td) {
+    background-color: rgba(250, 250, 250, 0.8);
+  }
+</style>
