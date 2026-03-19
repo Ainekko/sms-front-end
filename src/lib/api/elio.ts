@@ -31,6 +31,13 @@ export interface ElioLead {
     created_at: string;
 }
 
+export interface ElioConfig {
+    included_keywords: string[];
+    excluded_keywords: string[];
+    relevancy_threshold: number;
+    prompt: string;
+}
+
 export interface ElioLeadListResponse {
     leads: ElioLead[];
     total: number;
@@ -55,13 +62,13 @@ export interface ListLeadsParams {
  */
 export async function listLeads(params: ListLeadsParams = {}): Promise<ElioLeadListResponse> {
     const queryParams: Record<string, string | number | boolean> = {};
-    
+
     if (params.limit !== undefined) queryParams.limit = params.limit;
     if (params.offset !== undefined) queryParams.offset = params.offset;
     if (params.subreddit) queryParams.subreddit = params.subreddit;
     if (params.status) queryParams.status = params.status;
     if (params.min_urgency !== undefined) queryParams.min_urgency = params.min_urgency;
-    
+
     return api.get<ElioLeadListResponse>('/elio/leads', { params: queryParams });
 }
 
@@ -80,8 +87,32 @@ export async function updateLeadStatus(leadId: string, status: string): Promise<
     return api.patch<ElioLead>(`/elio/leads/${leadId}`, { status });
 }
 
+/**
+ * Get Elio agent configuration.
+ */
+export async function getConfig(): Promise<ElioConfig> {
+    return api.get<ElioConfig>('/elio/config');
+}
+
+/**
+ * Update Elio agent configuration.
+ */
+export async function updateConfig(config: Partial<ElioConfig>): Promise<ElioConfig> {
+    return api.patch<ElioConfig>('/elio/config', config);
+}
+
+/**
+ * Start a new Elio scan.
+ */
+export async function startScan(): Promise<any> {
+    return api.post('/elio/scan', {});
+}
+
 export const elioApi = {
     listLeads,
     getLead,
-    updateLeadStatus
+    updateLeadStatus,
+    getConfig,
+    updateConfig,
+    startScan
 };
