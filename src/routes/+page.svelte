@@ -31,20 +31,20 @@
     align-items: center;
     justify-content: center;
     gap: 1rem;
-    background: #0f0f14;
+    background: #fafafa;
   }
 
   .spinner {
     width: 3rem;
     height: 3rem;
-    border: 3px solid rgba(99, 102, 241, 0.2);
-    border-top-color: #6366f1;
+    border: 3px solid rgba(24, 24, 27, 0.1);
+    border-top-color: #18181b;
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
 
   .loading-text {
-    color: #64748b;
+    color: #71717a;
     font-size: 0.875rem;
     margin: 0;
   }

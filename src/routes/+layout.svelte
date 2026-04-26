@@ -34,14 +34,14 @@
     margin: 0;
     padding: 0;
     font-family:
-      'Inter',
+      'Poppins',
       -apple-system,
       BlinkMacSystemFont,
       'Segoe UI',
       Roboto,
       sans-serif;
-    background: #0f0f14;
-    color: #f1f5f9;
+    background: #fafafa;
+    color: #18181b;
   }
 
   :global(*) {
