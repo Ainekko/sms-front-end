@@ -15,6 +15,8 @@ import { api } from './base';
 import { config } from '../config';
 import type {
     CreateUserRequest,
+    SignupRequest,
+    SignupResponse,
     TokenResponse,
     User
 } from '../types/auth.types';
@@ -74,6 +76,30 @@ export async function login(email: string, password: string): Promise<TokenRespo
 }
 
 /**
+ * Public signup — creates account and returns token for immediate login.
+ */
+export async function signup(email: string, password: string): Promise<SignupResponse> {
+    const url = `${config.apiUrl}/auth/signup`;
+
+    console.log('[AuthAPI] Signing up:', email);
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.detail || data.error || 'Signup failed');
+    }
+
+    console.log('[AuthAPI] Signup successful');
+    return data as SignupResponse;
+}
+
+/**
  * Get the current authenticated user.
  */
 export async function getMe(): Promise<User> {
@@ -94,6 +120,7 @@ export async function createUser(request: CreateUserRequest): Promise<User> {
  */
 export const authApi = {
     login,
+    signup,
     getMe,
     createUser,
 

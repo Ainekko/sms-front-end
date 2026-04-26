@@ -142,4 +142,4 @@ export {
     type AuthState
 } from './authStore';
 
-export type { User, UserRole } from '../types/auth.types';
+export type { User, UserRole, PlanTier } from '../types/auth.types';

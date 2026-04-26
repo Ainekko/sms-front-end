@@ -139,6 +139,49 @@ function createAuthStore() {
         },
 
         /**
+         * Signup with email and password (public self-registration).
+         * Automatically logs in on success.
+         */
+        async signup(email: string, password: string): Promise<boolean> {
+            update(state => ({
+                ...state,
+                isLoading: true,
+                error: null,
+            }));
+
+            try {
+                const response = await authApi.signup(email, password);
+                const token = response.access_token;
+
+                // Store token
+                setStoredToken(token);
+
+                update(state => ({
+                    ...state,
+                    user: response.user,
+                    token,
+                    isLoading: false,
+                    isInitialized: true,
+                    error: null,
+                }));
+
+                console.log('[AuthStore] Signed up as:', response.user.email);
+                return true;
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Signup failed';
+
+                update(state => ({
+                    ...state,
+                    isLoading: false,
+                    error: message,
+                }));
+
+                console.error('[AuthStore] Signup failed:', message);
+                return false;
+            }
+        },
+
+        /**
          * Logout the current user.
          */
         logout(): void {

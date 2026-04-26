@@ -6,10 +6,11 @@
  */
 
 // =============================================================================
-// User Role Enum
+// Enums
 // =============================================================================
 
 export type UserRole = 'admin' | 'user';
+export type PlanTier = 'free' | 'pro';
 
 // =============================================================================
 // User Types
@@ -22,7 +23,9 @@ export interface User {
     id: string;
     email: string;
     role: UserRole;
+    plan: PlanTier;
     is_active: boolean;
+    has_twilio: boolean;
     created_at: string;
 }
 
@@ -47,6 +50,14 @@ export interface CreateUserRequest {
     role?: UserRole;
 }
 
+/**
+ * Signup request (public self-registration).
+ */
+export interface SignupRequest {
+    email: string;
+    password: string;
+}
+
 // =============================================================================
 // Response Types
 // =============================================================================
@@ -60,13 +71,24 @@ export interface TokenResponse {
 }
 
 /**
+ * Signup response — includes user + token for immediate login.
+ */
+export interface SignupResponse {
+    user: User;
+    access_token: string;
+    token_type: string;
+}
+
+/**
  * User response from API.
  */
 export interface UserResponse {
     id: string;
     email: string;
     role: string;
+    plan: string;
     is_active: boolean;
+    has_twilio: boolean;
     created_at: string;
 }
 

@@ -100,4 +100,11 @@
             <span>Sign In</span>
         {/if}
     </button>
+
+    <p class="mt-6 text-center text-sm text-slate-400">
+        Don't have an account?
+        <a href="/signup" class="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+            Create one
+        </a>
+    </p>
 </form>
