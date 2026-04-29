@@ -1,354 +1,48 @@
-<!--
-  Messages Page
-  ==============
-  Main page for the SMS messaging application.
-  
-  This page:
-  - Initializes the WebSocket connection on mount
-  - Loads initial conversations and brands from the API
-  - Renders the conversation list and chat window
-  - Manages modal states (brand manager, bulk message, contacts, new conversation)
-  - Cleans up WebSocket connection on unmount
-  
-  Route: /messages
-  
-  Layout:
-  - BrandHeader at top (with brand selector and action buttons)
-  - ConversationList sidebar on left (hidden on mobile)
-  - ChatWindow main area on right
-  - Modals and panels overlay
--->
-
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  /**
+   * Legacy Messages Route - Redirect
+   * ==================================
+   * Redirects to the new brand-scoped messages route: /b/[brandId]/messages
+   */
+  import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
+  import { brandsStore, loadBrands } from '$lib/stores/brandsStore';
+  import { isAuthenticated, isAuthInitialized } from '$lib/stores';
+  import { get } from 'svelte/store';
 
-  // Import components
-  import ConversationList from '$lib/components/ConversationList.svelte';
-  import ChatWindow from '$lib/components/ChatWindow.svelte';
-  import BrandHeader from '$lib/components/BrandHeader.svelte';
-  import BrandManager from '$lib/components/BrandManager.svelte';
-  import BulkMessageModal from '$lib/components/BulkMessageModal.svelte';
-  import ContactsPanel from '$lib/components/ContactsPanel.svelte';
-  import NewConversationModal from '$lib/components/NewConversationModal.svelte';
-
-  // AI Components
-  import DNCListPanel from '$lib/components/ai/DNCListPanel.svelte';
-  import HotLeadsPanel from '$lib/components/ai/HotLeadsPanel.svelte';
-
-  // Import services and stores
-  import { webSocketService } from '$lib/services/websocket';
-  import { loadConversations, selectConversation } from '$lib/stores/conversationsStore';
-  import { brandsStore, loadBrands, selectedBrand, type Brand } from '$lib/stores/brandsStore';
-  import { connectionStore } from '$lib/stores/connectionStore';
-  import { authStore, isAuthenticated, isAuthInitialized, isAdmin, currentUser } from '$lib/stores';
-
-  // ==========================================================================
-  // Auth Guard
-  // ==========================================================================
-
-  // Redirect to login if not authenticated
   $: if ($isAuthInitialized && !$isAuthenticated) {
     goto('/login');
   }
 
-  // ==========================================================================
-  // URL-Based State
-  // ==========================================================================
-
-  /** Get brand ID from URL query param */
-  $: brandId = $page.url.searchParams.get('brand');
-
-  // Sync URL brand ID to store
-  $: if (brandId) {
-    brandsStore.setSelectedBrandId(brandId);
-  }
-
-  // If store has selected brand but URL doesn't, update URL
-  $: if ($selectedBrand && !brandId) {
-    const url = new URL($page.url);
-    url.searchParams.set('brand', $selectedBrand.id);
-    goto(url.toString(), { replaceState: true, keepFocus: true });
-  }
-
-  // ==========================================================================
-  // Modal/Panel State
-  // ==========================================================================
-
-  // Modal/Panel State
-  // ==========================================================================
-
-  /** Whether brand manager modal is open */
-  let showBrandManager = false;
-
-  /** Brand to edit in manager (null for create) */
-  let editBrand: Brand | null = null;
-
-  /** Whether bulk message modal is open */
-  let showBulkMessage = false;
-
-  /** Whether contacts panel is open */
-  let showContacts = false;
-
-  /** Whether new conversation modal is open */
-  let showNewConversation = false;
-
-  /** Pre-filled phone number for new conversation */
-  let newConversationPhone = '';
-
-  /** Pre-filled contact name for new conversation */
-  let newConversationName: string | null = null;
-
-  /** Active conversation folder filter */
-  let conversationFilter: 'all' | 'unread' | 'hot' | 'dnc' | 'archived' = 'all';
-
-  /** Whether DNC panel is open */
-  let showDNCPanel = false;
-
-  /** Whether Hot Leads panel is open */
-  let showHotLeadsPanel = false;
-
-  // ==========================================================================
-  // Event Handlers
-  // ==========================================================================
-
-  /**
-   * Open brand manager in create mode.
-   */
-  function handleOpenBrandManager(): void {
-    editBrand = null;
-    showBrandManager = true;
-  }
-
-  /**
-   * Handle brand manager close.
-   */
-  function handleCloseBrandManager(): void {
-    showBrandManager = false;
-    editBrand = null;
-  }
-
-  /**
-   * Handle brand saved - just close the modal.
-   */
-  function handleBrandSaved(): void {
-    handleCloseBrandManager();
-  }
-
-  /**
-   * Handle new message sent - select the conversation.
-   */
-  function handleMessageSent(event: CustomEvent<{ phoneNumber: string }>): void {
-    selectConversation(event.detail.phoneNumber);
-    showNewConversation = false;
-    // Reset pre-filled data
-    newConversationPhone = '';
-    newConversationName = null;
-  }
-
-  /**
-   * Handle send message request from contacts panel.
-   */
-  function handleContactSendMessage(
-    event: CustomEvent<{ phoneNumber: string; contactName: string | null }>
-  ): void {
-    newConversationPhone = event.detail.phoneNumber;
-    newConversationName = event.detail.contactName;
-    showNewConversation = true;
-  }
-
-  /**
-   * Handle logout from user menu.
-   */
-  function handleLogout(): void {
-    authStore.logout();
-    goto('/login');
-  }
-
-  /**
-   * Navigate to admin dashboard.
-   */
-  function handleNavigateAdmin(): void {
-    goto('/admin');
-  }
-
-  /**
-   * Navigate to groups page.
-   */
-  function handleNavigateGroups(): void {
-    goto('/groups');
-  }
-
-  /**
-   * Navigate to campaigns page.
-   */
-  function handleNavigateCampaigns(): void {
-    goto('/campaigns');
-  }
-
-  // ==========================================================================
-  // Lifecycle
-  // ==========================================================================
-
-  /**
-   * Initialize the application on component mount.
-   * - Connect to WebSocket for real-time updates
-   * - Load initial brands and conversations from API
-   */
   onMount(async () => {
-    console.log('[MessagesPage] Mounting...');
+    // If we have a brand in URL params, use it
+    const urlBrandId = $page.url.searchParams.get('brand');
 
-    // Load brands first (needed for sending messages)
-    try {
+    if ($brandsStore.brands.length === 0) {
       await loadBrands();
-      console.log('[MessagesPage] Brands loaded');
-    } catch (error) {
-      console.error('[MessagesPage] Failed to load brands:', error);
     }
 
-    // Connect to WebSocket for real-time updates
-    try {
-      await webSocketService.connect();
-      console.log('[MessagesPage] WebSocket connected');
-    } catch (error) {
-      console.error('[MessagesPage] Failed to connect WebSocket:', error);
-      // The WebSocket service will handle reconnection attempts
+    const state = get(brandsStore);
+    const targetBrandId = urlBrandId || (state.brands.length > 0 ? state.brands[0].id : null);
+
+    if (targetBrandId) {
+      goto(`/b/${targetBrandId}/messages`, { replaceState: true });
+    } else {
+      // No brands — go to onboarding
+      goto('/', { replaceState: true });
     }
-
-    // Conversations are loaded reactively by ConversationList based on brandId from URL
-  });
-
-  /**
-   * Cleanup on component destroy.
-   * - Disconnect WebSocket to prevent memory leaks
-   */
-  onDestroy(() => {
-    console.log('[MessagesPage] Unmounting, disconnecting WebSocket...');
-    webSocketService.disconnect();
   });
 </script>
 
-<!-- 
-  Page Layout
-  ===========
-  Full-height flex container with:
-  - Fixed header at top
-  - Flex row for sidebar + main content
--->
-<div class="flex flex-col h-screen bg-gray-100 overflow-hidden font-sans">
-  <!-- Application Header -->
-  <BrandHeader
-    selectedBrandId={brandId}
-    on:openBrandManager={handleOpenBrandManager}
-    on:openBulkMessage={() => (showBulkMessage = true)}
-    on:openContacts={() => (showContacts = true)}
-    on:openHotLeads={() => {
-      conversationFilter = 'hot';
-      showHotLeadsPanel = true;
-    }}
-    on:openDNCList={() => {
-      conversationFilter = 'dnc';
-      showDNCPanel = true;
-    }}
-    on:logout={handleLogout}
-    on:navigateAdmin={handleNavigateAdmin}
-    on:navigateGroups={handleNavigateGroups}
-    on:navigateCampaigns={handleNavigateCampaigns}
-  />
-
-  <!-- Main Content Area -->
-  <div class="flex flex-1 overflow-hidden">
-    <!-- 
-            Sidebar: Conversation List
-            Fixed width, hidden on mobile
-        -->
-    <aside class="hidden md:flex w-80 flex-shrink-0 h-full">
-      <ConversationList
-        {brandId}
-        bind:activeFolder={conversationFilter}
-        on:newMessage={() => {
-          newConversationPhone = '';
-          newConversationName = null;
-          showNewConversation = true;
-        }}
-      />
-    </aside>
-
-    <!-- 
-            Main Area: Chat Window
-            Takes remaining width, full height
-        -->
-    <main class="flex-1 h-full relative">
-      <ChatWindow />
-    </main>
-  </div>
+<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#fafafa;">
+  <div style="width:2rem;height:2rem;border:3px solid rgba(24,24,27,0.1);border-top-color:#6366f1;border-radius:50%;animation:spin 1s linear infinite;"></div>
 </div>
 
-<!-- Modals and Panels -->
-
-<!-- Brand Manager Modal -->
-<BrandManager
-  isOpen={showBrandManager}
-  {editBrand}
-  on:close={handleCloseBrandManager}
-  on:saved={handleBrandSaved}
-/>
-
-<!-- Bulk Message Modal -->
-<BulkMessageModal isOpen={showBulkMessage} on:close={() => (showBulkMessage = false)} />
-
-<!-- Contacts Panel -->
-<ContactsPanel
-  isOpen={showContacts}
-  on:close={() => (showContacts = false)}
-  on:sendMessage={handleContactSendMessage}
-/>
-
-<!-- New Conversation Modal -->
-<NewConversationModal
-  isOpen={showNewConversation}
-  initialPhone={newConversationPhone}
-  initialContactName={newConversationName}
-  on:close={() => (showNewConversation = false)}
-  on:sent={handleMessageSent}
-/>
-
-<!-- AI Panels -->
-<DNCListPanel
-  isOpen={showDNCPanel}
-  on:close={() => (showDNCPanel = false)}
-  on:viewContact={(e) => {
-    showDNCPanel = false;
-    conversationFilter = 'dnc';
-  }}
-/>
-
-<HotLeadsPanel
-  isOpen={showHotLeadsPanel}
-  on:close={() => (showHotLeadsPanel = false)}
-  on:viewContact={(e) => {
-    showHotLeadsPanel = false;
-    conversationFilter = 'hot';
-  }}
-  on:sendMessage={(e) => {
-    // Select the conversation directly
-    selectConversation(e.detail.phoneNumber);
-    showHotLeadsPanel = false;
-    // Ensure we're on a tab where this conversation is visible (hot or all)
-    if (conversationFilter !== 'hot' && conversationFilter !== 'all') {
-      conversationFilter = 'all';
-    }
-  }}
-/>
-
 <style>
-  /* 
-     * Global styles for the page
-     * Ensures proper font rendering
-     */
-  :global(body) {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
-      'Open Sans', 'Helvetica Neue', sans-serif;
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
 </style>
+
