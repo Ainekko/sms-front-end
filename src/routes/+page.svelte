@@ -73,33 +73,33 @@
 
   const benefits = [
     {
-      title: 'AI-Powered DNC',
-      desc: 'Automatically flags contacts who opt out — zero manual work.',
+      title: 'Stay Compliant',
+      desc: 'AI auto-flags opt-outs so you never text the wrong person.',
       svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />'
     },
     {
-      title: 'Smart Campaigns',
-      desc: 'Launch targeted SMS blasts with follow-up sequences built in.',
+      title: 'Run Campaigns',
+      desc: 'Send promos, reminders, or follow-ups to the right people.',
       svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />'
     },
     {
-      title: '2-Way Inbox',
-      desc: 'Real-time conversations — every reply lands in one clean thread.',
+      title: 'Reply Instantly',
+      desc: 'Two-way texting — customers reply, you see it live.',
       svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />'
     },
     {
-      title: 'Contact Groups',
-      desc: 'Organize audiences into segments for precision targeting.',
+      title: 'Organize Contacts',
+      desc: 'Group your customers for targeted, relevant messages.',
       svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />'
     },
     {
-      title: 'Multi-Brand',
-      desc: 'Isolate data per brand — one dashboard, many businesses.',
+      title: 'Multiple Lines',
+      desc: 'Run different brands or locations from one login.',
       svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />'
     },
     {
-      title: 'Campaign Insights',
-      desc: 'Reply rates, delivery stats, and AI sentiment — all tracked.',
+      title: 'See What Works',
+      desc: 'Track replies, delivery, and what converts — in real time.',
       svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />'
     }
   ];
@@ -223,13 +223,13 @@
             <!-- Left Column -->
             <div class="lg:col-span-7 space-y-8 lg:pr-8">
               <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold text-zinc-900 leading-[1.05] tracking-tight">
-                <span in:blur={{ duration: 800, delay: 100, amount: 8 }}>Send smarter.</span><br />
-                <span in:blur={{ duration: 800, delay: 250, amount: 8 }} class="font-['Instrument_Serif'] italic text-zinc-500 font-normal tracking-wide">Close faster.</span><br />
-                <span in:blur={{ duration: 800, delay: 400, amount: 8 }}>Scale with AI.</span>
+                <span in:blur={{ duration: 800, delay: 100, amount: 8 }}>Text your</span><br />
+                <span in:blur={{ duration: 800, delay: 250, amount: 8 }} class="font-['Instrument_Serif'] italic text-zinc-500 font-normal tracking-wide">customers.</span><br />
+                <span in:blur={{ duration: 800, delay: 400, amount: 8 }}>Grow your business.</span>
               </h1>
 
               <p in:blur={{ duration: 700, delay: 180, amount: 6 }} class="text-lg md:text-xl text-zinc-500 leading-relaxed font-light max-w-lg">
-                AI-powered SMS campaigns, automated DNC compliance, and real-time 2-way messaging — <strong class="font-medium text-zinc-700">all in one platform, starting free.</strong>
+                The simple SMS platform built for small businesses. Send campaigns, manage replies, and let AI handle compliance — <strong class="font-medium text-zinc-700">so you can focus on selling.</strong>
               </p>
 
               <div in:fly={{ y: 20, duration: 600, delay: 420 }} class="flex flex-col sm:flex-row items-center gap-4 pt-6 max-w-lg">
@@ -261,13 +261,13 @@
                 <div class="relative z-20">
                   <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1A1C21]/80 backdrop-blur-sm border border-white/10 shadow-xl text-xs font-semibold text-zinc-300">
                     <span class="w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.3)]"></span>
-                    Part of the Flowjoy ecosystem
+                    A Flowjoy product
                   </div>
                 </div>
 
                 <div class="relative z-20 mt-auto">
-                  <h3 class="text-[2.75rem] font-bold text-white mb-4 leading-[1.05] tracking-tight">Your SMS.<br /><span class="font-['Instrument_Serif'] italic font-normal text-zinc-400">Supercharged.</span></h3>
-                  <p class="text-zinc-400 text-[15px] font-light mb-8">Campaigns, contacts, AI compliance — turn SMS into a revenue engine.</p>
+                  <h3 class="text-[2.75rem] font-bold text-white mb-4 leading-[1.05] tracking-tight">One tool.<br /><span class="font-['Instrument_Serif'] italic font-normal text-zinc-400">Big results.</span></h3>
+                  <p class="text-zinc-400 text-[15px] font-light mb-8">Part of the Flowjoy ecosystem — SMS, AI assistants, and automation tools built for businesses like yours.</p>
                   <button on:click={() => goto('/signup')} class="w-full py-4 text-center bg-white hover:bg-zinc-100 text-zinc-900 rounded-2xl font-bold text-sm transition-all shadow-md active:scale-95">Start Free Today</button>
                 </div>
               </div>
@@ -283,14 +283,14 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
           <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-50 border border-zinc-200 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-8 shadow-sm">
-            Why Broadr?
+            Built for Small Business
           </div>
           <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight text-zinc-900 leading-[1.05]">
-            Stop guessing.<br />
-            <span class="font-['Instrument_Serif'] italic font-normal text-zinc-500">Start converting.</span>
+            Everything you need.<br />
+            <span class="font-['Instrument_Serif'] italic font-normal text-zinc-500">Nothing you don't.</span>
           </h2>
           <p class="text-lg md:text-xl text-zinc-500 leading-relaxed max-w-2xl mx-auto mt-6 font-light">
-            Every feature designed to help you send the right message, to the right people, at the right time.
+            No bloated features. Just the tools that actually help your business reach more customers and close more deals.
           </p>
         </div>
 
@@ -340,7 +340,7 @@
                 <span class="text-4xl font-bold text-zinc-900">$0</span>
                 <span class="text-zinc-400 text-sm">/mo</span>
               </div>
-              <p class="text-sm text-zinc-500 font-light">Everything you need to get started with SMS outreach.</p>
+              <p class="text-sm text-zinc-500 font-light">Perfect for getting started — send texts, manage contacts, see what works.</p>
             </div>
             <div class="space-y-3 mb-8">
               {#each ['Multi-brand messaging', '2-way inbox', 'Contact groups', 'Campaign builder', 'Basic delivery stats', 'Up to 500 contacts'] as feat}
@@ -369,7 +369,7 @@
                 <span class="text-4xl font-bold">$19.99</span>
                 <span class="text-white/50 text-sm">/mo</span>
               </div>
-              <p class="text-sm text-white/60 font-light mb-8">AI features unlocked. Scale without limits.</p>
+              <p class="text-sm text-white/60 font-light mb-8">Let AI handle the busywork so you can focus on growing.</p>
               <div class="space-y-3 mb-8">
                 {#each ['Everything in Starter', 'AI-powered DNC detection', 'Smart follow-up campaigns', 'Campaign insights & analytics', 'AI sentiment analysis', 'Priority support', 'Unlimited contacts'] as feat}
                   <div class="flex items-center gap-3 text-sm text-white/80">
@@ -390,7 +390,7 @@
         <!-- Custom CTA -->
         <div class="mt-12 text-center">
           <p class="text-sm text-zinc-500 font-light">
-            Need a custom-built SMS follow-up system integrated with your entire business? <a href="https://flowjoy.online" target="_blank" rel="noopener noreferrer" class="text-zinc-800 font-medium hover:text-zinc-900 underline underline-offset-2 decoration-zinc-300 hover:decoration-zinc-500 transition-colors">Talk to Flowjoy →</a>
+            Want a fully custom setup — AI receptionist, CRM integration, the works? <a href="https://flowjoy.online" target="_blank" rel="noopener noreferrer" class="text-zinc-800 font-medium hover:text-zinc-900 underline underline-offset-2 decoration-zinc-300 hover:decoration-zinc-500 transition-colors">See what Flowjoy can build for you →</a>
           </p>
         </div>
       </div>
