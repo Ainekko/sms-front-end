@@ -10,7 +10,7 @@
 
   // Redirect if already authenticated
   $: if ($isAuthInitialized && $isAuthenticated) {
-    goto('/messages');
+    goto('/');
   }
 
   let email = '';
@@ -45,7 +45,7 @@
     const success = await authStore.signup(email, password);
 
     if (success) {
-      goto('/messages');
+      goto('/');
     } else {
       // Error is set in the store, pick it up
       const state = await new Promise<any>((resolve) => {

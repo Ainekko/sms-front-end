@@ -10,7 +10,7 @@
 
   // Redirect if already authenticated
   $: if ($isAuthInitialized && $isAuthenticated) {
-    goto('/messages');
+    goto('/');
   }
 
   let email = '';
@@ -41,7 +41,7 @@
     const success = await authStore.login(email, password);
 
     if (success) {
-      goto('/messages');
+      goto('/');
     } else {
       formError = 'Invalid email or password. Please try again.';
     }

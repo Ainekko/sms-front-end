@@ -105,18 +105,18 @@
 </script>
 
 <!-- Input Container -->
-<div class="p-4 bg-white border-t border-gray-200">
+<div class="p-4 bg-[#111113] border-t border-white/[0.06]">
   <div class="flex items-end space-x-2">
     <!-- Message Textarea -->
     <textarea
       bind:this={textareaElement}
       bind:value={messageText}
       on:keydown={handleKeydown}
-      class="flex-1 p-3 font-normal text-base text-zinc-900 bg-zinc-50 shadow-lg shadow-zinc-500/30 rounded-full
-                focus:border-transparent
-                resize-none bg-gray-50
-                disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed
-                transition-colors"
+      class="flex-1 p-3 font-normal text-base text-zinc-200 bg-white/[0.04] border border-white/[0.08] rounded-full
+                focus:border-indigo-500/50 focus:bg-white/[0.06]
+                resize-none
+                disabled:bg-white/[0.02] disabled:text-zinc-600 disabled:cursor-not-allowed
+                transition-colors outline-none placeholder-zinc-600"
       rows="1"
       placeholder={disabled ? 'Sending...' : 'Type a message...'}
       {disabled}
@@ -124,10 +124,10 @@
 
     <!-- Send Button -->
     <button
-      class="px-4 py-3 bg-zinc-800 text-white rounded-full
-                hover:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500
+      class="px-4 py-3 bg-indigo-600 text-white rounded-full
+                hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-[#111113]
                 font-medium transition-colors
-                disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600
+                disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-indigo-600
                 flex items-center justify-center min-w-[80px]"
       on:click={handleSend}
       disabled={isButtonDisabled}
@@ -154,7 +154,7 @@
   <!-- Character count hint (optional, for long messages) -->
   {#if messageText.length > 140}
     <div class="mt-1 text-right">
-      <span class="text-xs {messageText.length > 160 ? 'text-yellow-600' : 'text-gray-400'}">
+      <span class="text-xs {messageText.length > 160 ? 'text-yellow-500' : 'text-zinc-600'}">
         {messageText.length} characters
         {#if messageText.length > 160}
           (may be split into multiple SMS)

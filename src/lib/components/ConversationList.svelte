@@ -365,15 +365,15 @@
   }
 </script>
 
-<div class="flex flex-col h-full bg-white border-r border-gray-200 overflow-hidden w-full">
+<div class="flex flex-col h-full bg-[#111113] border-r border-white/[0.06] overflow-hidden w-full">
   <!-- Header -->
-  <div class="p-4 border-b border-gray-100">
+  <div class="p-4 border-b border-white/[0.06]">
     <div class="flex items-center justify-between mb-3">
-      <h2 class="text-xl font-bold text-gray-800">Messages</h2>
+      <h2 class="text-xl font-bold text-zinc-100">Messages</h2>
 
       <!-- Refresh/Retry -->
       <button
-        class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        class="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.06] rounded-lg transition-colors"
         on:click={handleRetry}
         title="Refresh conversations"
       >
@@ -399,7 +399,7 @@
         type="text"
         bind:value={searchQuery}
         placeholder="Search messages..."
-        class="w-full pl-9 pr-4 py-2 bg-gray-100 border-transparent focus:bg-white focus:border-blue-500 rounded-lg text-sm transition-all outline-none"
+        class="w-full pl-9 pr-4 py-2 bg-white/[0.04] border border-white/[0.06] focus:bg-white/[0.08] focus:border-indigo-500/50 rounded-lg text-sm text-zinc-200 placeholder-zinc-600 transition-all outline-none"
       />
       <svg
         class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"
@@ -419,13 +419,13 @@
     <!-- Folders - Stacked Rows -->
     <div class="space-y-1 mb-3">
       <!-- Row 1: Primary filters -->
-      <div class="flex space-x-1 bg-zinc-100 p-1 rounded-lg">
+      <div class="flex space-x-1 bg-white/[0.04] p-1 rounded-lg">
         {#each ['all', 'unread', 'hot'] as folder}
           <button
             class="flex-1 py-1.5 text-xs font-medium rounded-md transition-all capitalize {activeFolder ===
             folder
-              ? 'bg-white text-zinc-900 shadow-sm'
-              : 'text-zinc-500 hover:text-zinc-700'}"
+              ? 'bg-white/10 text-zinc-100 shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-300'}"
             on:click={() => (activeFolder = folder)}
           >
             {folder}
@@ -433,13 +433,13 @@
         {/each}
       </div>
       <!-- Row 2: AI + Archive -->
-      <div class="flex space-x-1 bg-zinc-100 p-1 rounded-lg">
+      <div class="flex space-x-1 bg-white/[0.04] p-1 rounded-lg">
         {#each ['dnc', 'archived'] as folder}
           <button
             class="flex-1 py-1.5 text-xs font-medium rounded-md transition-all capitalize {activeFolder ===
             folder
-              ? 'bg-white text-zinc-900 shadow-sm'
-              : 'text-zinc-500 hover:text-zinc-700'}"
+              ? 'bg-white/10 text-zinc-100 shadow-sm'
+              : 'text-zinc-500 hover:text-zinc-300'}"
             on:click={() => (activeFolder = folder)}
           >
             {folder}
@@ -452,8 +452,8 @@
     {#if mode === 'default'}
       <button
         class="w-full flex items-center justify-center space-x-2 px-4 py-2.5
-                    text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600
-                    rounded-lg hover:from-green-600 hover:to-emerald-700
+                    text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-violet-600
+                    rounded-lg hover:from-indigo-600 hover:to-violet-700
                     transition-all shadow-sm hover:shadow-md"
         on:click={() => dispatch('newMessage')}
       >
@@ -485,7 +485,7 @@
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          <span class="text-sm text-gray-500">Loading...</span>
+          <span class="text-sm text-zinc-500">Loading...</span>
         </div>
       </div>
 
@@ -493,9 +493,9 @@
     {:else if error}
       <div class="flex items-center justify-center h-32 p-4">
         <div class="text-center">
-          <p class="text-sm text-red-500 mb-2">{error}</p>
+          <p class="text-sm text-red-400 mb-2">{error}</p>
           <button
-            class="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            class="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
             on:click={handleRetry}>Try Again</button
           >
         </div>
@@ -505,7 +505,7 @@
     {:else if filteredConversations.length === 0}
       <div class="flex items-center justify-center h-32 p-4">
         <div class="text-center">
-          <p class="text-sm text-gray-500">No conversations in {activeFolder}</p>
+          <p class="text-sm text-zinc-500">No conversations in {activeFolder}</p>
         </div>
       </div>
 
@@ -514,9 +514,9 @@
       {#each filteredConversations as conversation (conversation.id || conversation.phoneNumber || conversation.phone_number)}
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <div
-          class="w-full text-left p-4 hover:bg-gray-50 transition-colors duration-200 border-b border-gray-50 cursor-pointer group relative
+          class="w-full text-left p-4 hover:bg-white/[0.04] transition-colors duration-200 border-b border-white/[0.03] cursor-pointer group relative
                     {selectedId === (conversation.phoneNumber || conversation.id)
-            ? 'bg-blue-50 hover:bg-blue-50 border-l-4 border-l-blue-500'
+            ? 'bg-indigo-500/10 hover:bg-indigo-500/10 border-l-4 border-l-indigo-500'
             : 'border-l-4 border-l-transparent'}"
           on:click={() => handleSelectConversation(conversation)}
         >
@@ -533,10 +533,10 @@
             <!-- Details -->
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-baseline">
-                <h3 class="text-sm font-semibold text-gray-900 truncate">
+                <h3 class="text-sm font-semibold text-zinc-200 truncate">
                   {getDisplayName(conversation)}
                 </h3>
-                <span class="text-xs text-gray-500 flex-shrink-0 ml-2">
+                <span class="text-xs text-zinc-500 flex-shrink-0 ml-2">
                   {formatTime(conversation.lastMessageAt || conversation.last_message_at)}
                 </span>
               </div>
@@ -544,11 +544,11 @@
               <div class="flex items-center justify-between mt-1">
                 <p
                   class="text-sm truncate {getUnreadCount(conversation) > 0
-                    ? 'font-medium text-gray-900'
-                    : 'text-gray-600'}"
+                    ? 'font-medium text-zinc-200'
+                    : 'text-zinc-500'}"
                 >
                   {#if getDirection(conversation) === 'outbound'}
-                    <span class="text-gray-400">You: </span>
+                    <span class="text-zinc-600">You: </span>
                   {/if}
                   {getMessagePreview(conversation)}
                 </p>
@@ -556,7 +556,7 @@
                 <div class="flex items-center space-x-2">
                   {#if getUnreadCount(conversation) > 0}
                     <span
-                      class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-blue-500 rounded-full flex-shrink-0"
+                      class="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-indigo-500 rounded-full flex-shrink-0"
                     >
                       {getUnreadCount(conversation) > 99 ? '99+' : getUnreadCount(conversation)}
                     </span>
@@ -564,7 +564,7 @@
 
                   <!-- Archive Button (Visible on hover or if archived) -->
                   <button
-                    class="text-gray-300 hover:text-gray-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity {getIsArchived(
+                    class="text-zinc-600 hover:text-zinc-400 p-1 opacity-0 group-hover:opacity-100 transition-opacity {getIsArchived(
                       conversation
                     )
                       ? 'opacity-100 text-yellow-500'
@@ -619,7 +619,7 @@
 
       <!-- End of List Indicator (when no more to load) -->
       {#if mode === 'default' && !hasMore && filteredConversations.length > 0}
-        <div class="text-center py-3 text-xs text-gray-400">All conversations loaded</div>
+        <div class="text-center py-3 text-xs text-zinc-600">All conversations loaded</div>
       {/if}
     {/if}
   </div>

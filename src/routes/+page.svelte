@@ -184,8 +184,8 @@
     <!-- Header -->
     <header class="absolute top-0 left-0 right-0 z-50 px-6 py-6 flex justify-between items-center max-w-7xl mx-auto">
       <div class="text-xl font-bold tracking-tight text-zinc-900 flex items-center gap-2">
-        <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-sm">S</div>
-        SMS SaaS
+        <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shadow-sm">B</div>
+        Broadr
       </div>
       <nav>
         {#if $isAuthInitialized}
@@ -297,10 +297,10 @@
         <div class="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-8 mb-24">
           <div class="md:col-span-5 lg:col-span-4 flex flex-col items-start gap-5">
             <div class="flex items-center gap-3 text-white">
-              <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl">S</div>
-              <span class="font-bold text-xl tracking-tight">SMS SaaS</span>
+              <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl">B</div>
+              <span class="font-bold text-xl tracking-tight">Broadr</span>
             </div>
-            <p class="text-sm font-light">© {new Date().getFullYear()} SMS SaaS, Inc.</p>
+            <p class="text-sm font-light">© {new Date().getFullYear()} Broadr, Inc.</p>
           </div>
         </div>
         <div class="w-full flex justify-center items-end opacity-[0.1] pointer-events-none select-none overflow-hidden relative -mb-16 md:-mb-24">

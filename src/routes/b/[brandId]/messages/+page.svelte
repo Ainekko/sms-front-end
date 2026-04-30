@@ -217,7 +217,7 @@
     flex-direction: column;
     height: 100%;
     overflow: hidden;
-    background: #f4f4f5;
+    background: #09090b;
   }
 
   /* Action Bar */
@@ -226,14 +226,14 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 20px;
-    background: white;
-    border-bottom: 1px solid #e4e4e7;
+    background: #111113;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
     flex-shrink: 0;
   }
   .action-bar-title {
     font-size: 16px;
     font-weight: 700;
-    color: #18181b;
+    color: #f4f4f5;
     margin: 0;
   }
   .action-bar-actions {
@@ -248,9 +248,9 @@
     gap: 6px;
     padding: 6px 12px;
     border-radius: 7px;
-    border: 1px solid #e4e4e7;
-    background: white;
-    color: #3f3f46;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: #a1a1aa;
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
@@ -258,34 +258,35 @@
     white-space: nowrap;
   }
   .action-btn:hover {
-    background: #f4f4f5;
-    border-color: #d4d4d8;
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.15);
+    color: #e4e4e7;
   }
 
   .action-btn-primary {
-    background: linear-gradient(135deg, #f97316, #ec4899);
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
     border-color: transparent;
     color: white;
   }
   .action-btn-primary:hover {
     opacity: 0.9;
-    background: linear-gradient(135deg, #ea580c, #db2777);
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
     border-color: transparent;
   }
 
   .action-btn-warm {
-    color: #92400e;
-    border-color: #fde68a;
-    background: #fffbeb;
+    color: #fbbf24;
+    border-color: rgba(251,191,36,0.2);
+    background: rgba(251,191,36,0.08);
   }
   .action-btn-warm:hover {
-    background: #fef3c7;
+    background: rgba(251,191,36,0.15);
   }
 
   .action-divider {
     width: 1px;
     height: 20px;
-    background: #e4e4e7;
+    background: rgba(255,255,255,0.08);
     margin: 0 4px;
   }
 
@@ -316,7 +317,7 @@
   }
 
   :global(body) {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
       'Open Sans', 'Helvetica Neue', sans-serif;
   }
 </style>

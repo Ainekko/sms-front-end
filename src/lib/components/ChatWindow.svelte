@@ -237,11 +237,11 @@
 </script>
 
 <!-- Chat Window Container -->
-<div class="flex flex-col h-full bg-gray-50">
+<div class="flex flex-col h-full bg-[#09090b]">
   <!-- If a conversation is selected -->
   {#if selectedId}
     <!-- Chat Header -->
-    <div class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200">
+    <div class="flex items-center justify-between px-6 py-4 bg-[#111113] border-b border-white/[0.06]">
       <div class="flex items-center space-x-3">
         <!-- Avatar -->
         <div
@@ -253,11 +253,11 @@
 
         <!-- Phone Number / Contact Name -->
         <div>
-          <h3 class="font-semibold text-gray-900">
+          <h3 class="font-semibold text-zinc-100">
             {conversation?.contactName || formatPhoneNumber(selectedId)}
           </h3>
           {#if conversation}
-            <p class="text-xs text-gray-500">
+            <p class="text-xs text-zinc-500">
               {conversation.messageCount} messages
               {#if conversation.contactName}
                 • {formatPhoneNumber(selectedId)}
@@ -290,7 +290,7 @@
               >
               </path>
             </svg>
-            <span class="text-sm text-gray-500">Loading messages...</span>
+            <span class="text-sm text-zinc-500">Loading messages...</span>
           </div>
         </div>
 
@@ -311,9 +311,9 @@
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <p class="text-sm text-gray-600 mb-2">{error}</p>
+            <p class="text-sm text-zinc-400 mb-2">{error}</p>
             <button
-              class="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              class="text-sm text-indigo-400 hover:text-indigo-300 font-medium"
               on:click={handleRetry}
             >
               Try Again
@@ -326,7 +326,7 @@
         <div class="flex items-center justify-center h-full">
           <div class="text-center">
             <svg
-              class="w-12 h-12 text-gray-300 mx-auto mb-2"
+              class="w-12 h-12 text-zinc-600 mx-auto mb-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -338,8 +338,8 @@
                 d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
               />
             </svg>
-            <p class="text-sm text-gray-500">No messages yet</p>
-            <p class="text-xs text-gray-400 mt-1">Send a message to start the conversation</p>
+            <p class="text-sm text-zinc-500">No messages yet</p>
+            <p class="text-xs text-zinc-600 mt-1">Send a message to start the conversation</p>
           </div>
         </div>
 
@@ -347,7 +347,7 @@
       {:else}
         <!-- Conversation starter indicator -->
         <div class="flex justify-center mb-4">
-          <span class="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+          <span class="text-xs text-zinc-500 bg-white/[0.05] px-3 py-1 rounded-full">
             Conversation with {formatPhoneNumber(selectedId)}
           </span>
         </div>
@@ -357,8 +357,8 @@
           <div class="flex {message.direction === 'outbound' ? 'justify-end' : 'justify-start'}">
             <div
               class="max-w-[70%] {message.direction === 'outbound'
-                ? 'bg-blue-600 text-white rounded-l-2xl rounded-tr-2xl'
-                : 'bg-white text-gray-800 border border-gray-200 rounded-r-2xl rounded-tl-2xl'} 
+                ? 'bg-indigo-600 text-white rounded-l-2xl rounded-tr-2xl'
+                : 'bg-[#1a1a1f] text-zinc-200 border border-white/[0.06] rounded-r-2xl rounded-tl-2xl'} 
                                 px-4 py-3 shadow-sm"
             >
               <!-- MMS Media Attachments -->
@@ -400,8 +400,8 @@
                         rel="noopener noreferrer"
                         class="flex items-center gap-2 p-2 rounded-lg {message.direction ===
                         'outbound'
-                          ? 'bg-blue-500'
-                          : 'bg-gray-100'} hover:opacity-80"
+                          ? 'bg-indigo-500'
+                          : 'bg-white/[0.06]'} hover:opacity-80"
                       >
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path
@@ -443,7 +443,7 @@
         <!-- Sending indicator -->
         {#if isSending}
           <div class="flex justify-end">
-            <div class="bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-sm">Sending...</div>
+            <div class="bg-indigo-500/20 text-indigo-400 px-4 py-2 rounded-full text-sm">Sending...</div>
           </div>
         {/if}
       {/if}
@@ -454,10 +454,10 @@
 
     <!-- No conversation selected -->
   {:else}
-    <div class="flex-1 flex items-center justify-center text-gray-400">
+    <div class="flex-1 flex items-center justify-center text-zinc-500">
       <div class="text-center">
         <svg
-          class="w-16 h-16 mx-auto mb-4 text-gray-300"
+          class="w-16 h-16 mx-auto mb-4 text-zinc-700"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -469,8 +469,8 @@
             d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
           />
         </svg>
-        <p class="text-lg font-medium text-gray-600">Select a conversation</p>
-        <p class="text-sm text-gray-400 mt-1">
+        <p class="text-lg font-medium text-zinc-400">Select a conversation</p>
+        <p class="text-sm text-zinc-600 mt-1">
           Choose a conversation from the list to start messaging
         </p>
       </div>

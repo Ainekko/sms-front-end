@@ -40,8 +40,8 @@
       'Segoe UI',
       Roboto,
       sans-serif;
-    background: #fafafa;
-    color: #18181b;
+    background: #09090b;
+    color: #e4e4e7;
   }
 
   :global(*) {
