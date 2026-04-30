@@ -417,7 +417,6 @@
             <div class="flex flex-col gap-4">
               <h4 class="text-white text-xs font-bold tracking-widest uppercase mb-1">Company</h4>
               <a href="https://flowjoy.online" target="_blank" rel="noopener noreferrer" class="text-sm hover:text-white transition-colors">Flowjoy</a>
-              <a href="https://creatorbook.tech" target="_blank" rel="noopener noreferrer" class="text-sm hover:text-white transition-colors">Creatorbook</a>
             </div>
           </div>
         </div>
