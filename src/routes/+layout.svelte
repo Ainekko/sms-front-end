@@ -8,6 +8,11 @@
   import { authStore, toasts } from '$lib/stores';
   import '../app.css';
 
+  import { dev } from '$app/environment';
+  import { injectAnalytics } from '@vercel/analytics/sveltekit';
+
+  injectAnalytics({ mode: dev ? 'development' : 'production' });
+
   // Initialize auth on mount
   onMount(async () => {
     await authStore.initialize();
