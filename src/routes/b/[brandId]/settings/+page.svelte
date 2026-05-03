@@ -2,7 +2,7 @@
   /**
    * Settings Page
    * ==============
-   * User account settings — Twilio credentials, account info, plan details.
+   * User account settings — Twilio credentials, account info, webhook URLs.
    */
   import { onMount } from 'svelte';
   import { fly } from 'svelte/transition';
@@ -21,6 +21,10 @@
   let saveError = '';
   let showTokenField = false;
   let removing = false;
+
+  // Webhook
+  let regenerating = false;
+  let copiedField: string | null = null;
 
   onMount(async () => {
     try {
@@ -53,7 +57,6 @@
       twilioSid = '';
       twilioToken = '';
       showTokenField = false;
-      // Refresh user data so has_twilio updates in sidebar
       await authStore.refreshUser();
       setTimeout(() => (saveSuccess = false), 4000);
     } catch (e: any) {
@@ -76,6 +79,27 @@
       removing = false;
     }
   }
+
+  async function handleRegenerateWebhook() {
+    if (!confirm('Regenerate webhook token? Your old webhook URLs will stop working. You will need to update them in Twilio.')) return;
+    regenerating = true;
+    try {
+      const urls = await settingsApi.regenerateWebhookToken();
+      if (settings) {
+        settings = { ...settings, webhook_urls: urls };
+      }
+    } catch (e: any) {
+      error = e.message || 'Failed to regenerate webhook';
+    } finally {
+      regenerating = false;
+    }
+  }
+
+  function copyToClipboard(text: string, field: string) {
+    navigator.clipboard.writeText(text);
+    copiedField = field;
+    setTimeout(() => (copiedField = null), 2000);
+  }
 </script>
 
 <svelte:head>
@@ -96,7 +120,7 @@
   {:else if error}
     <div class="settings-error">{error}</div>
   {:else if settings}
-    <div class="settings-grid">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
       <!-- Twilio Integration Card -->
       <div class="card card-twilio">
@@ -222,24 +246,75 @@
         </div>
       </div>
 
-      <!-- Webhook Info Card -->
-      <div class="card">
+      <!-- Webhook URLs Card -->
+      <div class="card lg:col-span-2">
         <div class="card-header">
           <div class="card-icon webhook-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
           </div>
           <div class="card-header-text">
-            <h2 class="card-title">Webhook Setup</h2>
-            <p class="card-desc">Configure your Twilio webhook to receive incoming messages.</p>
+            <h2 class="card-title">Webhook URLs</h2>
+            <p class="card-desc">Configure these URLs in your Twilio Console to receive messages and delivery updates.</p>
           </div>
+          {#if settings.webhook_urls?.webhook_token}
+            <span class="status-badge connected">
+              <span class="status-dot"></span>
+              Active
+            </span>
+          {:else}
+            <span class="status-badge disconnected">
+              <span class="status-dot"></span>
+              Not Generated
+            </span>
+          {/if}
         </div>
-        <div class="webhook-info">
-          <p class="webhook-text">In your Twilio Console, set the webhook URL for your phone number to:</p>
-          <div class="webhook-url-box">
-            <code>https://your-api-domain.com/api/v1/messages/webhook/incoming</code>
+
+        {#if settings.webhook_urls?.incoming_url}
+          <div class="webhook-info">
+            <p class="webhook-text">In your <a href="https://console.twilio.com/" target="_blank" rel="noopener">Twilio Console</a>, go to your phone number settings and paste these URLs:</p>
+
+            <div class="webhook-field">
+              <span class="webhook-label">Incoming Messages ("A Message Comes In")</span>
+              <div class="webhook-url-box">
+                <code>{settings.webhook_urls.incoming_url}</code>
+                <button class="btn-copy" on:click={() => copyToClipboard(settings.webhook_urls?.incoming_url || '', 'incoming')} title="Copy URL">
+                  {#if copiedField === 'incoming'}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+                  {:else}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  {/if}
+                </button>
+              </div>
+            </div>
+
+            <div class="webhook-field">
+              <span class="webhook-label">Status Callback URL</span>
+              <div class="webhook-url-box">
+                <code>{settings.webhook_urls.status_url}</code>
+                <button class="btn-copy" on:click={() => copyToClipboard(settings.webhook_urls?.status_url || '', 'status')} title="Copy URL">
+                  {#if copiedField === 'status'}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+                  {:else}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  {/if}
+                </button>
+              </div>
+            </div>
+
+            <p class="webhook-hint">Set both methods to <strong>HTTP POST</strong>. These URLs are unique to your account.</p>
+
+            <div class="card-actions">
+              <button class="btn btn-outline" on:click={handleRegenerateWebhook} disabled={regenerating}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                {regenerating ? 'Regenerating…' : 'Regenerate URLs'}
+              </button>
+            </div>
           </div>
-          <p class="webhook-hint">Set the method to <strong>POST</strong> and the format to <strong>HTTP POST</strong>.</p>
-        </div>
+        {:else}
+          <div class="webhook-info">
+            <p class="webhook-text">Save your Twilio credentials above to automatically generate your unique webhook URLs.</p>
+          </div>
+        {/if}
       </div>
 
     </div>
@@ -249,7 +324,7 @@
 <style>
   .settings-page {
     padding: 32px 40px;
-    max-width: 800px;
+    max-width: 1024px;
     height: 100%;
     overflow-y: auto;
     background: #09090b;
@@ -286,10 +361,6 @@
     padding: 16px; border-radius: 12px;
     background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
     color: #fca5a5; font-size: 0.875rem;
-  }
-
-  .settings-grid {
-    display: flex; flex-direction: column; gap: 20px;
   }
 
   /* Card */
@@ -496,21 +567,51 @@
   .webhook-info { margin-top: 4px; }
   .webhook-text {
     font-size: 0.8rem; color: #a1a1aa;
-    margin: 0 0 12px; line-height: 1.5;
+    margin: 0 0 16px; line-height: 1.5;
+  }
+  .webhook-text a {
+    color: #818cf8; text-decoration: none;
+  }
+  .webhook-text a:hover { text-decoration: underline; }
+  .webhook-field {
+    margin-bottom: 14px;
+  }
+  .webhook-label {
+    display: block;
+    font-size: 0.7rem; font-weight: 600; color: #71717a;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    margin-bottom: 6px;
   }
   .webhook-url-box {
-    padding: 12px 16px; border-radius: 10px;
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-radius: 10px;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 12px;
   }
   .webhook-url-box code {
-    font-size: 0.78rem; color: #a5b4fc;
+    flex: 1; min-width: 0;
+    font-size: 0.75rem; color: #a5b4fc;
     font-family: 'SF Mono', 'Fira Code', monospace;
     word-break: break-all;
   }
+  .btn-copy {
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 6px;
+    color: #a1a1aa;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .btn-copy:hover {
+    background: rgba(99,102,241,0.15);
+    border-color: rgba(99,102,241,0.3);
+    color: #818cf8;
+  }
   .webhook-hint {
-    font-size: 0.75rem; color: #52525b; margin: 0;
+    font-size: 0.75rem; color: #52525b; margin: 12px 0 0;
   }
   .webhook-hint strong { color: #71717a; }
 
