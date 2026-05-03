@@ -155,62 +155,41 @@
   }
 </script>
 
-<!-- Validation Section - Minimal Design -->
-<div class="bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-gray-100">
+<!-- Validation Section - Dark Theme Design -->
+<div class="bg-[#111113] rounded-xl border border-white/5">
   <!-- Header -->
-  <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-    <h3 class="text-lg font-bold text-gray-900">Phone Validation</h3>
+  <div class="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+    <h3 class="text-[0.9rem] font-semibold text-[#f4f4f5] m-0">Phone Validation</h3>
     <div class="flex items-center space-x-3">
       {#if displayStatus === 'completed'}
-        <span class="text-sm text-gray-500">Completed</span>
+        <span class="text-[0.75rem] font-semibold uppercase tracking-wider text-[#4ade80] bg-[#4ade80]/10 border border-[#4ade80]/20 px-2 py-1 rounded-md">Completed</span>
       {:else if displayStatus === 'processing' || displayStatus === 'pending'}
-        <span class="text-sm text-gray-500 flex items-center space-x-2">
-          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            ></path>
+        <span class="text-sm text-zinc-400 flex items-center space-x-2">
+          <svg class="w-4 h-4 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
           </svg>
           <span>Validating...</span>
         </span>
       {:else if displayStatus === 'failed'}
-        <span class="text-sm text-gray-500">Failed</span>
+        <span class="text-[0.75rem] font-semibold uppercase tracking-wider text-[#f87171] bg-[#f87171]/10 border border-[#f87171]/20 px-2 py-1 rounded-md">Failed</span>
       {/if}
 
       <!-- Action Buttons in Header -->
       {#if displayStatus === null && group.contact_count > 0}
         <button
-          class="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-xl hover:bg-black transition-all shadow-sm disabled:opacity-50 flex items-center space-x-2"
+          class="px-3 py-2 text-[0.78rem] font-semibold text-white bg-gradient-to-br from-indigo-500 to-violet-500 rounded-[9px] hover:shadow-[0_4px_12px_rgba(99,102,241,0.3)] transition-all disabled:opacity-50 flex items-center space-x-2 border-none"
           on:click={() => handleStartValidation(false)}
           disabled={isStartingValidation}
         >
           {#if isStartingValidation}
             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              ></path>
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
           {:else}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           {/if}
           <span>Validate</span>
@@ -219,34 +198,18 @@
 
       {#if (displayStatus === 'completed' || displayStatus === 'failed') && group.contact_count > 0}
         <button
-          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm disabled:opacity-50 flex items-center space-x-2"
+          class="px-3 py-2 text-[0.78rem] font-semibold text-zinc-300 bg-transparent border border-white/10 rounded-[9px] hover:bg-white/5 transition-all disabled:opacity-50 flex items-center space-x-2"
           on:click={() => handleStartValidation(true)}
           disabled={isStartingValidation}
         >
           {#if isStartingValidation}
             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              ></path>
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
           {:else}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           {/if}
           <span>{displayStatus === 'failed' ? 'Retry' : 'Revalidate'}</span>
@@ -261,46 +224,48 @@
     {#if isProcessing}
       <div class="mb-6">
         <div class="flex items-center justify-between mb-2">
-          <span class="text-sm text-gray-600">Progress</span>
-          <span class="text-sm font-medium text-gray-900">{displayProgress}%</span>
+          <span class="text-xs font-medium text-zinc-400 uppercase tracking-wider">Progress</span>
+          <span class="text-sm font-semibold text-zinc-100">{displayProgress}%</span>
         </div>
-        <div class="w-full bg-gray-100 rounded-full h-2">
+        <div class="w-full bg-white/5 rounded-full h-2 border border-white/5">
           <div
-            class="bg-gray-900 h-2 rounded-full transition-all duration-300"
+            class="bg-indigo-500 h-2 rounded-full transition-all duration-300 relative overflow-hidden"
             style="width: {displayProgress}%"
-          ></div>
+          >
+            <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+          </div>
         </div>
 
         <!-- Show live counts while processing -->
-        <div class="grid grid-cols-3 gap-4 mt-4">
-          <div class="text-center">
-            <p class="text-lg font-semibold text-gray-900">{localValidCount}</p>
-            <p class="text-xs text-gray-500">Valid</p>
+        <div class="grid grid-cols-3 gap-4 mt-6">
+          <div class="text-center p-3 bg-white/5 rounded-xl border border-white/5">
+            <p class="text-lg font-bold text-zinc-100">{localValidCount}</p>
+            <p class="text-[0.7rem] uppercase tracking-wider text-zinc-500 mt-1">Valid</p>
           </div>
-          <div class="text-center">
-            <p class="text-lg font-semibold text-gray-900">{localInvalidCount}</p>
-            <p class="text-xs text-gray-500">Invalid</p>
+          <div class="text-center p-3 bg-white/5 rounded-xl border border-white/5">
+            <p class="text-lg font-bold text-zinc-100">{localInvalidCount}</p>
+            <p class="text-[0.7rem] uppercase tracking-wider text-zinc-500 mt-1">Invalid</p>
           </div>
-          <div class="text-center">
-            <p class="text-lg font-semibold text-gray-900">{localPendingCount}</p>
-            <p class="text-xs text-gray-500">Pending</p>
+          <div class="text-center p-3 bg-white/5 rounded-xl border border-white/5">
+            <p class="text-lg font-bold text-zinc-100">{localPendingCount}</p>
+            <p class="text-[0.7rem] uppercase tracking-wider text-zinc-500 mt-1">Pending</p>
           </div>
         </div>
       </div>
     {:else if hasValidationData}
       <!-- Completed Stats -->
       <div class="grid grid-cols-3 gap-4 mb-6">
-        <div class="text-center p-4 bg-gray-50 rounded-xl">
-          <p class="text-2xl font-bold text-gray-900">{validCount}</p>
-          <p class="text-xs text-gray-500 font-medium mt-1">Valid</p>
+        <div class="text-center p-4 bg-white/5 rounded-xl border border-white/5">
+          <p class="text-2xl font-bold text-zinc-100">{validCount}</p>
+          <p class="text-[0.7rem] uppercase tracking-wider text-zinc-500 font-medium mt-1">Valid</p>
         </div>
-        <div class="text-center p-4 bg-gray-50 rounded-xl">
-          <p class="text-2xl font-bold text-gray-900">{invalidCount}</p>
-          <p class="text-xs text-gray-500 font-medium mt-1">Invalid</p>
+        <div class="text-center p-4 bg-white/5 rounded-xl border border-white/5">
+          <p class="text-2xl font-bold text-zinc-100">{invalidCount}</p>
+          <p class="text-[0.7rem] uppercase tracking-wider text-zinc-500 font-medium mt-1">Invalid</p>
         </div>
-        <div class="text-center p-4 bg-gray-50 rounded-xl">
-          <p class="text-2xl font-bold text-gray-900">{pendingCount}</p>
-          <p class="text-xs text-gray-500 font-medium mt-1">Pending</p>
+        <div class="text-center p-4 bg-white/5 rounded-xl border border-white/5">
+          <p class="text-2xl font-bold text-zinc-100">{pendingCount}</p>
+          <p class="text-[0.7rem] uppercase tracking-wider text-zinc-500 font-medium mt-1">Pending</p>
         </div>
       </div>
 
@@ -308,16 +273,11 @@
       <div class="flex flex-wrap gap-3">
         {#if validCount > 0}
           <button
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm flex items-center space-x-2"
+            class="px-3 py-2 text-[0.78rem] font-semibold text-zinc-300 bg-transparent border border-white/10 rounded-[9px] hover:bg-white/5 transition-all flex items-center space-x-2"
             on:click={() => handleDownload('valid')}
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             <span>Valid ({validCount})</span>
           </button>
@@ -325,16 +285,11 @@
 
         {#if invalidCount > 0}
           <button
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm flex items-center space-x-2"
+            class="px-3 py-2 text-[0.78rem] font-semibold text-zinc-300 bg-transparent border border-white/10 rounded-[9px] hover:bg-white/5 transition-all flex items-center space-x-2"
             on:click={() => handleDownload('invalid')}
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             <span>Invalid ({invalidCount})</span>
           </button>
@@ -342,16 +297,11 @@
 
         {#if group.contact_count > 0}
           <button
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm flex items-center space-x-2"
+            class="px-3 py-2 text-[0.78rem] font-semibold text-zinc-300 bg-transparent border border-white/10 rounded-[9px] hover:bg-white/5 transition-all flex items-center space-x-2"
             on:click={() => handleDownload('all')}
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             <span>All ({group.contact_count})</span>
           </button>
@@ -360,50 +310,26 @@
     {:else if displayStatus === null && group.contact_count > 0}
       <!-- Empty state - never validated -->
       <div class="text-center py-8">
-        <svg
-          class="w-12 h-12 mx-auto mb-4 text-gray-300"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <p class="text-sm text-gray-600 mb-1">No contacts have been validated yet.</p>
-        <p class="text-xs text-gray-400 mb-4">Validate phone numbers to check deliverability.</p>
+        <div class="w-16 h-16 mx-auto mb-4 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p class="text-sm font-medium text-zinc-300 mb-1">No contacts have been validated yet.</p>
+        <p class="text-xs text-zinc-500 mb-5">Validate phone numbers to check deliverability.</p>
         <button
-          class="px-6 py-2 text-sm font-medium text-white bg-gray-900 rounded-xl hover:bg-black transition-all shadow-sm disabled:opacity-50 inline-flex items-center space-x-2"
+          class="px-4 py-2 text-[0.78rem] font-semibold text-white bg-gradient-to-br from-indigo-500 to-violet-500 rounded-[9px] hover:shadow-[0_4px_12px_rgba(99,102,241,0.3)] transition-all disabled:opacity-50 inline-flex items-center space-x-2 border-none"
           on:click={() => handleStartValidation(false)}
           disabled={isStartingValidation}
         >
           {#if isStartingValidation}
             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              ></path>
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
             </svg>
           {:else}
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           {/if}
           <span>Validate {group.contact_count} Contacts</span>
@@ -412,7 +338,7 @@
     {:else}
       <!-- No contacts state -->
       <div class="text-center py-8">
-        <p class="text-sm text-gray-500">Add contacts to this group to validate them.</p>
+        <p class="text-sm text-zinc-500">Add contacts to this group to validate them.</p>
       </div>
     {/if}
   </div>

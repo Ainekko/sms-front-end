@@ -8,11 +8,14 @@
   import { goto } from '$app/navigation';
   import { brandsStore, selectedBrand } from '$lib/stores/brandsStore';
   import { currentUser } from '$lib/stores';
+  import BulkMessageModal from '$lib/components/BulkMessageModal.svelte';
 
   export let data;
   $: brandId = data.brandId;
   $: brand = $selectedBrand;
   $: hasTwilio = $currentUser?.has_twilio ?? false;
+
+  let showBulkMessage = false;
 
   function formatPhone(phone: string): string {
     const d = phone.replace(/^\+/, '');
@@ -77,6 +80,14 @@
         <span class="dash-phone">{formatPhone(brand.phoneNumber)}</span>
       {/if}
     </div>
+    <div class="dash-header-right">
+      <button class="action-btn-primary" on:click={() => (showBulkMessage = true)}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        </svg>
+        Bulk Send
+      </button>
+    </div>
   </div>
 
   <!-- Twilio Setup CTA (if not configured) -->
@@ -124,6 +135,8 @@
   </div>
 </div>
 
+<BulkMessageModal isOpen={showBulkMessage} on:close={() => (showBulkMessage = false)} />
+
 <style>
   .dashboard {
     padding: 32px 40px;
@@ -155,6 +168,28 @@
     font-size: 0.8rem;
     color: #52525b;
     font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  .dash-header-right {
+    display: flex;
+    align-items: center;
+  }
+  .action-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .action-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(99,102,241,0.3);
   }
 
   /* Setup CTA */
