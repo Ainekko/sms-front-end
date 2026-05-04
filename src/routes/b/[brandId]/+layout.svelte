@@ -150,11 +150,22 @@
           <svg class="brand-chevron" class:open={showBrandSwitcher} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M6 9l6 6 6-6" />
           </svg>
-        {:else}
-          <div class="brand-avatar">?</div>
+        {:else if $brandsStore.isLoading}
+          <div class="brand-avatar">
+             <div style="width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+          </div>
           <div class="brand-info">
             <span class="brand-name">Loading…</span>
           </div>
+        {:else}
+          <div class="brand-avatar" style="background: rgba(255,255,255,0.1);">+</div>
+          <div class="brand-info">
+            <span class="brand-name">No Brands</span>
+            <span class="brand-phone" style="font-size: 10px;">Click to manage</span>
+          </div>
+          <svg class="brand-chevron" class:open={showBrandSwitcher} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         {/if}
       </button>
 
@@ -297,6 +308,10 @@
 
 <style>
   /* ===== Shell ===== */
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
   .app-shell {
     display: flex;
     height: 100vh;
