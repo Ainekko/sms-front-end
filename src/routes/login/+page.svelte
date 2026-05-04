@@ -7,6 +7,7 @@
   import { goto } from '$app/navigation';
   import { fly } from 'svelte/transition';
   import { authStore, isAuthenticated, isAuthInitialized } from '$lib/stores';
+  import GoogleAuth from '$lib/components/GoogleAuth.svelte';
 
   // Redirect if already authenticated
   $: if ($isAuthInitialized && $isAuthenticated) {
@@ -143,6 +144,16 @@
             {/if}
           </button>
         </form>
+
+        <div class="my-8 flex items-center gap-4">
+          <div class="h-px bg-zinc-200 flex-1"></div>
+          <span class="text-xs font-medium text-zinc-400 uppercase tracking-wider">Or continue with</span>
+          <div class="h-px bg-zinc-200 flex-1"></div>
+        </div>
+
+        <div class="flex justify-center">
+          <GoogleAuth size="large" />
+        </div>
 
         <p class="mt-8 text-center text-sm text-zinc-500">
           Don't have an account?

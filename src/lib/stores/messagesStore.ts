@@ -141,7 +141,6 @@ const initialState: MessagesState = {
     isSending: false,
     error: null,
     hasMore: false,
-    hasMore: false,
     offset: 0,
     brandId: null
 };
