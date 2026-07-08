@@ -359,8 +359,17 @@ export async function loadBrands(): Promise<void> {
     brandsStore.setLoading();
 
     try {
-        const data = await brandsApi.listBrands();
-        const brands = data.map(transformBrand);
+        const mockBrandData = [
+            {
+                id: 'mock-brand-123',
+                name: 'Broadr Dev Brand',
+                phone_number: '+15551234567',
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }
+        ];
+        const brands = mockBrandData.map(transformBrand);
         brandsStore.setBrands(brands);
 
         // Auto-select first brand if none selected

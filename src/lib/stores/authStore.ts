@@ -46,50 +46,22 @@ function createAuthStore() {
          * Call this on app startup to restore the session.
          */
         async initialize(): Promise<void> {
-            const token = getStoredToken();
-
-            if (!token) {
-                update(state => ({
-                    ...state,
-                    isInitialized: true,
-                }));
-                return;
-            }
-
+            // Dev override: bypass auth and automatically log in a mock user
             update(state => ({
                 ...state,
-                token,
-                isLoading: true,
+                user: {
+                    id: 'mock-user-id',
+                    email: 'dev@flowjoy.com',
+                    role: 'admin',
+                    has_twilio: true
+                } as any,
+                token: 'mock-token',
+                isLoading: false,
+                isInitialized: true,
+                error: null
             }));
-
-            try {
-                // Validate token by fetching user
-                const user = await authApi.getMe();
-
-                update(state => ({
-                    ...state,
-                    user,
-                    isLoading: false,
-                    isInitialized: true,
-                    error: null,
-                }));
-
-                console.log('[AuthStore] Session restored for:', user.email);
-            } catch (error) {
-                // Token is invalid, clear it
-                clearStoredToken();
-
-                update(state => ({
-                    ...state,
-                    user: null,
-                    token: null,
-                    isLoading: false,
-                    isInitialized: true,
-                    error: null, // Don't show error for expired session
-                }));
-
-                console.log('[AuthStore] Session expired, cleared token');
-            }
+            console.log('[AuthStore] Auth bypassed for development');
+            return;
         },
 
         /**
