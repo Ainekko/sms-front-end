@@ -71,52 +71,8 @@
     noBrands = false;
   }
 
-  const benefits = [
-    {
-      title: 'Stay Compliant',
-      desc: 'AI auto-flags opt-outs so you never text the wrong person.',
-      svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />'
-    },
-    {
-      title: 'Run Campaigns',
-      desc: 'Send promos, reminders, or follow-ups to the right people.',
-      svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />'
-    },
-    {
-      title: 'Reply Instantly',
-      desc: 'Two-way texting — customers reply, you see it live.',
-      svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />'
-    },
-    {
-      title: 'Organize Contacts',
-      desc: 'Group your customers for targeted, relevant messages.',
-      svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />'
-    },
-    {
-      title: 'Multiple Lines',
-      desc: 'Run different brands or locations from one login.',
-      svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />'
-    },
-    {
-      title: 'See What Works',
-      desc: 'Track replies, delivery, and what converts — in real time.',
-      svg: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />'
-    }
-  ];
-
-  let sectionRef: HTMLElement;
-  let visibleBenefits = false;
-
   onMount(() => {
     setTimeout(() => (mounted = true), 50);
-    setTimeout(() => {
-      if (sectionRef) {
-        const obs = new IntersectionObserver(([entry]) => {
-          if (entry.isIntersecting) { visibleBenefits = true; obs.disconnect(); }
-        }, { threshold: 0.08 });
-        obs.observe(sectionRef);
-      }
-    }, 100);
   });
 </script>
 
@@ -193,238 +149,283 @@
   {/if}
 {:else}
   <!-- Landing Page (No Auth) -->
-  <div class="font-[Poppins] bg-white min-h-screen text-zinc-900 overflow-x-hidden selection:bg-zinc-300/40">
+  <div class="font-[Poppins] min-h-screen overflow-x-clip selection:bg-emerald-500/30 bg-white">
     
     <!-- Header -->
-    <header class="absolute top-0 left-0 right-0 z-50 px-6 py-6 flex justify-between items-center max-w-7xl mx-auto">
-      <div class="text-xl font-bold tracking-tight text-zinc-900 flex items-center gap-2">
-        <div class="w-8 h-8 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold shadow-sm">B</div>
-        Broadr
+    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-zinc-200 px-6 py-4">
+      <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <a href="/" class="text-xl font-bold tracking-tight text-zinc-900 flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold shadow-sm">B</div>
+          Broadr
+        </a>
+        <div class="flex items-center gap-4">
+          <a href="#features" class="hidden sm:inline-flex text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">Features</a>
+          <a href="#pricing" class="hidden sm:inline-flex text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">Pricing</a>
+          {#if $isAuthInitialized}
+            <button on:click={() => goto('/signup')} class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-full bg-emerald-500 hover:bg-emerald-400 text-white shadow-md transition-all">
+              Get Started Free
+            </button>
+          {/if}
+        </div>
       </div>
-      <nav class="flex items-center gap-3">
-        <a href="#pricing" class="hidden sm:inline text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">Pricing</a>
-        {#if $isAuthInitialized}
-          <button on:click={() => goto('/signup')} class="px-5 py-2 text-sm font-semibold rounded-full bg-zinc-900 hover:bg-zinc-800 text-white transition-colors shadow-lg shadow-zinc-900/20">
-            Get Started
-          </button>
-        {/if}
-      </nav>
     </header>
 
-    <!-- Hero Section -->
-    <section class="relative pt-32 pb-24 md:pt-40 md:pb-32 min-h-screen flex flex-col justify-center border-b border-zinc-100">
-      <div class="absolute inset-0 pointer-events-none opacity-40" style="background-image: radial-gradient(circle, #d4d4d8 1px, transparent 1px); background-size: 28px 28px;"></div>
-      <div class="absolute -top-20 left-1/3 w-[500px] h-[500px] bg-zinc-200/40 rounded-full blur-[120px] pointer-events-none"></div>
+    <!-- ═══════════ HERO ═══════════ -->
+    <section class="relative pt-16 pb-20 md:pt-24 md:pb-28 flex flex-col justify-center overflow-hidden">
+      <!-- Prism gradient mesh -->
+      <div class="prism-wrap">
+        <div class="prism-blob prism-1"></div>
+        <div class="prism-blob prism-2"></div>
+        <div class="prism-blob prism-3"></div>
+        <div class="prism-blob prism-4"></div>
+      </div>
+      <!-- Noise overlay -->
+      <div class="noise-overlay"></div>
+      <!-- Dot grid -->
+      <div class="absolute inset-0 pointer-events-none opacity-[0.3] z-[2]" style="background-image: radial-gradient(circle, #d4d4d8 0.6px, transparent 0.6px); background-size: 28px 28px;"></div>
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
         {#if mounted}
           <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-            
             <!-- Left Column -->
             <div class="lg:col-span-7 space-y-8 lg:pr-8">
-              <h1 class="text-5xl md:text-6xl lg:text-7xl font-bold text-zinc-900 leading-[1.05] tracking-tight">
-                <span in:blur={{ duration: 800, delay: 100, amount: 8 }}>Text your</span><br />
-                <span in:blur={{ duration: 800, delay: 250, amount: 8 }} class="font-['Instrument_Serif'] italic text-zinc-500 font-normal tracking-wide">customers.</span><br />
-                <span in:blur={{ duration: 800, delay: 400, amount: 8 }}>Grow your business.</span>
+              <h1 class="text-[2.75rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold text-zinc-900 leading-[1.05] tracking-tight">
+                <span in:blur={{ duration: 800, delay: 100, amount: 8 }}>Import lists.</span><br />
+                <span in:blur={{ duration: 800, delay: 250, amount: 8 }}>Run SMS Campaigns.</span><br />
+                <span in:blur={{ duration: 800, delay: 400, amount: 8 }} class="font-['Instrument_Serif'] italic text-zinc-500 font-normal tracking-wide">Stay Compliant.</span>
               </h1>
 
-              <p in:blur={{ duration: 700, delay: 180, amount: 6 }} class="text-lg md:text-xl text-zinc-500 leading-relaxed font-light max-w-lg">
-                The simple SMS platform built for small businesses. Send campaigns, manage replies, and let AI handle compliance — <strong class="font-medium text-zinc-700">so you can focus on selling.</strong>
+              <p in:blur={{ duration: 700, delay: 180, amount: 6 }} class="text-lg md:text-xl text-zinc-500 leading-relaxed font-light max-w-xl">
+                The lightweight SMS platform built for sales teams. Import CSVs, run campaigns, auto-exclude opt-outs, and instantly surface hot replies.
+                <span class="block mt-3 text-base md:text-lg font-semibold text-zinc-800">Clean, compliance-first, and built for speed. No bloated features.</span>
+                <span class="block mt-4 text-xs font-bold text-emerald-600 tracking-wider uppercase">CSV Upload · Smart Filter Lists · AI Compliance Built-in</span>
               </p>
 
-              <div in:fly={{ y: 20, duration: 600, delay: 420 }} class="flex flex-col sm:flex-row items-center gap-4 pt-6 max-w-lg">
-                <div class="flex-1 w-full p-6 rounded-[1.5rem] bg-white border border-zinc-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group transition-all duration-300 hover:-translate-y-1">
-                  <div class="absolute -right-4 -top-8 w-24 h-24 bg-zinc-100/50 rounded-full blur-xl pointer-events-none"></div>
-                  <div class="relative z-10">
-                    <div class="text-[2rem] font-bold text-zinc-900 tracking-tight leading-none mb-2">Free</div>
-                    <div class="text-[11px] uppercase tracking-widest text-zinc-500 font-semibold">Starter Plan</div>
+              <!-- Main CTA -->
+              <div in:fly={{ y: 20, duration: 600, delay: 350 }} class="flex flex-wrap items-center gap-4">
+                <button on:click={() => goto('/signup')} class="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-sm tracking-wide transition-all duration-300 shadow-[0_12px_30px_rgba(16,185,129,0.3)] hover:shadow-[0_16px_40px_rgba(16,185,129,0.4)] hover:scale-[1.03]">
+                  Start Free Today
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+                <a href="#pricing" class="inline-flex items-center gap-2 px-6 py-4 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-semibold text-sm transition-all duration-300">
+                  View Pricing &rarr;
+                </a>
+              </div>
+
+              <!-- Proof stats -->
+              <div in:fly={{ y: 20, duration: 600, delay: 420 }} class="flex flex-col sm:flex-row items-center gap-4 max-w-lg">
+                {#each [{ val: '0%', label: 'Compliance Penalties', sub: 'Auto-DNC system' }, { val: '10x', label: 'More Replies', sub: 'Than email campaigns' }, { val: '<2m', label: 'Upload to Send', sub: 'Fast CSV parser' }] as stat}
+                  <div class="flex-1 w-full p-5 rounded-[1.5rem] bg-white/60 backdrop-blur-md border border-zinc-200 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:border-zinc-300 shadow-sm">
+                    <div class="relative z-10">
+                      <div class="text-2xl font-bold text-zinc-900 tracking-tight leading-none mb-1">{stat.val}</div>
+                      <div class="text-[11px] uppercase tracking-widest text-zinc-500 font-semibold">{stat.label}</div>
+                    </div>
                   </div>
-                </div>
-                <div class="flex-1 w-full p-6 rounded-[1.5rem] bg-white border border-zinc-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden group transition-all duration-300 hover:-translate-y-1">
-                  <div class="absolute -right-4 -top-8 w-24 h-24 bg-zinc-200/50 rounded-full blur-xl pointer-events-none"></div>
-                  <div class="relative z-10">
-                    <div class="text-[2rem] font-bold text-zinc-900 tracking-tight leading-none mb-2">$19<span class="text-lg font-medium text-zinc-400">/mo</span></div>
-                    <div class="text-[11px] uppercase tracking-widest text-zinc-500 font-semibold">Pro + AI</div>
-                  </div>
-                </div>
+                {/each}
               </div>
             </div>
 
-            <!-- Right Column (Bento Card) -->
+            <!-- Right: Interactive Dashboard Mockup -->
             <div class="lg:col-span-5 w-full relative" in:fly={{ y: 30, duration: 800, delay: 200 }}>
-              <div class="group relative overflow-hidden bg-[#14161A] rounded-[2.5rem] p-8 lg:p-10 border border-zinc-800/80 shadow-2xl flex flex-col justify-between w-full isolate h-[520px]">
-                <div class="absolute inset-0 opacity-[0.35] mix-blend-overlay pointer-events-none z-10" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E');"></div>
-                <div class="absolute -top-24 -right-24 w-[350px] h-[350px] bg-zinc-500/15 rounded-full blur-[80px] pointer-events-none transition-transform duration-[10s] group-hover:scale-125 z-0"></div>
-                <div class="absolute -bottom-24 -left-24 w-[300px] h-[300px] bg-zinc-400/10 rounded-full blur-[70px] pointer-events-none z-0"></div>
+              <div class="group relative overflow-hidden bg-[#111215] rounded-[2.5rem] p-6 border border-white/[0.06] shadow-2xl flex flex-col justify-between w-full isolate h-[540px]">
+                <div class="absolute inset-0 opacity-[0.25] mix-blend-overlay pointer-events-none z-10" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23n)%22/%3E%3C/svg%3E');"></div>
+                <div class="absolute -top-24 -right-24 w-[350px] h-[350px] bg-emerald-600/15 rounded-full blur-[80px] pointer-events-none z-0"></div>
+                <div class="absolute -bottom-24 -left-24 w-[300px] h-[300px] bg-blue-500/15 rounded-full blur-[70px] pointer-events-none z-0"></div>
 
-                <!-- Top Badge -->
-                <div class="relative z-20">
-                  <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1A1C21]/80 backdrop-blur-sm border border-white/10 shadow-xl text-xs font-semibold text-zinc-300">
-                    <span class="w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.3)]"></span>
-                    A Flowjoy product
+                <!-- Header area of mock UI -->
+                <div class="relative z-20 flex justify-between items-center border-b border-white/5 pb-4">
+                  <div>
+                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">Campaign: Q3 Outreach</h4>
+                    <span class="text-[10px] text-zinc-500">Source: leads_july.csv</span>
+                  </div>
+                  <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400">Active</span>
+                </div>
+
+                <!-- Stats in mock UI -->
+                <div class="relative z-20 grid grid-cols-4 gap-2 my-4">
+                  <div class="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center">
+                    <span class="text-[10px] text-zinc-500 block">Sent</span>
+                    <span class="text-sm font-bold text-white">1,420</span>
+                  </div>
+                  <div class="bg-white/[0.02] border border-white/5 rounded-xl p-2.5 text-center">
+                    <span class="text-[10px] text-zinc-500 block">Replied</span>
+                    <span class="text-sm font-bold text-white">312</span>
+                  </div>
+                  <div class="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-2.5 text-center">
+                    <span class="text-[10px] text-emerald-400 block font-medium">Interested 🔥</span>
+                    <span class="text-sm font-bold text-emerald-400">42</span>
+                  </div>
+                  <div class="bg-rose-500/5 border border-rose-500/10 rounded-xl p-2.5 text-center">
+                    <span class="text-[10px] text-rose-400 block font-medium">DNC 🛑</span>
+                    <span class="text-sm font-bold text-rose-400">18</span>
                   </div>
                 </div>
 
-                <div class="relative z-20 mt-auto">
-                  <h3 class="text-[2.75rem] font-bold text-white mb-4 leading-[1.05] tracking-tight">One tool.<br /><span class="font-['Instrument_Serif'] italic font-normal text-zinc-400">Big results.</span></h3>
-                  <p class="text-zinc-400 text-[15px] font-light mb-8">Part of the Flowjoy ecosystem — SMS, AI assistants, and automation tools built for businesses like yours.</p>
-                  <button on:click={() => goto('/signup')} class="w-full py-4 text-center bg-white hover:bg-zinc-100 text-zinc-900 rounded-2xl font-bold text-sm transition-all shadow-md active:scale-95">Start Free Today</button>
+                <!-- Live Chat/Alert Stream in Mock UI -->
+                <div class="relative z-20 flex-1 space-y-3 overflow-y-auto pr-1 py-1 custom-scrollbar">
+                  <!-- Msg 1 -->
+                  <div class="bg-[#18191E] border border-white/5 rounded-xl p-3 flex justify-between items-start gap-3">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[11px] font-bold text-white">Alex Mercer</span>
+                        <span class="text-[9px] text-zinc-500">1m ago</span>
+                      </div>
+                      <p class="text-[11px] text-zinc-300 leading-tight">"Yeah, this looks great. Can you send over a demo link?"</p>
+                    </div>
+                    <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-[9px] font-bold text-emerald-400 uppercase shrink-0">Interested</span>
+                  </div>
+
+                  <!-- Msg 2 -->
+                  <div class="bg-[#18191E] border border-white/5 rounded-xl p-3 flex justify-between items-start gap-3">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[11px] font-bold text-white">Sarah Jenkins</span>
+                        <span class="text-[9px] text-zinc-500">4m ago</span>
+                      </div>
+                      <p class="text-[11px] text-zinc-300 leading-tight">"Please stop messaging this number."</p>
+                    </div>
+                    <span class="px-2 py-0.5 rounded bg-rose-500/15 text-[9px] font-bold text-rose-400 uppercase shrink-0">DNC Flagged</span>
+                  </div>
+
+                  <!-- Msg 3 -->
+                  <div class="bg-[#18191E]/50 border border-white/5 rounded-xl p-3 opacity-60">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-[11px] font-bold text-white">David Miller</span>
+                      <span class="text-[9px] text-zinc-500">12m ago</span>
+                    </div>
+                    <p class="text-[11px] text-zinc-400 leading-tight">"I'll look at this over the weekend."</p>
+                  </div>
+                </div>
+
+                <!-- Follow-up Campaign Trigger Mock -->
+                <div class="relative z-20 mt-4 border-t border-white/5 pt-4">
+                  <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex justify-between items-center">
+                    <div>
+                      <p class="text-[11px] font-bold text-white">Configure Follow-up Campaign</p>
+                      <p class="text-[9px] text-zinc-400">Targeting: 1,108 No Replies · Excluding: 18 DNC</p>
+                    </div>
+                    <button class="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-[10px] transition-colors">Start Sequence</button>
+                  </div>
                 </div>
               </div>
             </div>
-
           </div>
         {/if}
       </div>
     </section>
 
-    <!-- Benefits Section -->
-    <section bind:this={sectionRef} class="py-24 bg-white relative z-10 font-[Poppins]">
+    <!-- ═══════════ FEATURES SECTION ═══════════ -->
+    <section id="features" class="py-24 bg-[#09090B] text-white relative overflow-hidden">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-16">
-          <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-50 border border-zinc-200 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-8 shadow-sm">
-            Built for Small Business
+        <div class="text-center mb-20">
+          <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.06] border border-white/10 text-sm font-medium text-zinc-400 mb-6">
+            Engineered for High-Volume Outreach
           </div>
-          <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight text-zinc-900 leading-[1.05]">
-            Everything you need.<br />
-            <span class="font-['Instrument_Serif'] italic font-normal text-zinc-500">Nothing you don't.</span>
+          <h2 class="text-4xl md:text-5xl font-bold mb-5 tracking-tight leading-[1.05]">
+            Run campaigns, isolate hot leads,<br />and stay out of <span class="font-['Instrument_Serif'] italic font-normal text-zinc-500">compliance trouble</span>.
           </h2>
-          <p class="text-lg md:text-xl text-zinc-500 leading-relaxed max-w-2xl mx-auto mt-6 font-light">
-            No bloated features. Just the tools that actually help your business reach more customers and close more deals.
-          </p>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {#each benefits as benefit, idx}
-            <div 
-              class="group relative overflow-hidden bg-[#181A1F] rounded-[2rem] p-6 lg:p-8 border border-white/5 shadow-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:border-white/10 flex flex-col items-center justify-center text-center gap-5"
-              style="opacity: {visibleBenefits ? 1 : 0}; transform: translateY({visibleBenefits ? 0 : 30}px); transition: opacity 0.6s ease {idx * 100}ms, transform 0.6s ease {idx * 100}ms;"
-            >
-              <div class="absolute -top-10 -right-10 w-32 h-32 opacity-[0.05] pointer-events-none transition-transform duration-700 group-hover:scale-150 group-hover:opacity-[0.1]">
-                <div class="w-full h-full rounded-full bg-white blur-2xl"></div>
-              </div>
-              <div class="w-14 h-14 rounded-2xl bg-[#212328] border border-white/10 flex items-center justify-center text-white/70 group-hover:bg-white group-hover:text-zinc-900 group-hover:border-transparent transition-all duration-300 relative z-10 shrink-0 shadow-inner">
-                <svg class="w-6 h-6 flex-shrink-0 -rotate-12 group-hover:rotate-0 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {@html benefit.svg}
-                </svg>
-              </div>
-              <div class="relative z-10 w-full">
-                <h3 class="text-[14px] md:text-[15px] font-semibold text-white tracking-tight mb-2">{benefit.title}</h3>
-                <p class="text-[12px] text-zinc-400 leading-tight">{benefit.desc}</p>
-              </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {#each [
+            { title: 'CSV List Importing', desc: 'Import contacts in seconds. Broadr parses phone numbers, checks for formatting, and prepares clean campaigns.', icon: '📁' },
+            { title: 'Smart Campaign Launcher', desc: 'Send bulk SMS with automatic send throttling. Customize messages dynamically with variables.', icon: '🚀' },
+            { title: 'Real-time Two-way Inbox', desc: 'Chat directly with leads that reply. High-fidelity texting client lets you handle objections in real-time.', icon: '💬' },
+            { title: 'Do Not Contact Safeguard', desc: 'Any opt-out keywords (STOP, unsubscribe) automatically flag the contact as DNC, blocking future texts.', icon: '🛡️' }
+          ] as feat}
+            <div class="group relative bg-[#111215] rounded-[2rem] p-8 border border-white/[0.06] overflow-hidden transition-all duration-500 hover:-translate-y-1.5 hover:border-white/10">
+              <span class="text-3xl mb-4 block">{feat.icon}</span>
+              <h3 class="text-lg font-bold text-white mb-2 tracking-tight">{feat.title}</h3>
+              <p class="text-zinc-400 text-xs leading-relaxed font-light">{feat.desc}</p>
             </div>
           {/each}
+        </div>
+
+        <!-- Secondary Feature Highlights -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+          <div class="bg-[#111215] rounded-[2rem] p-8 border border-white/[0.06] flex flex-col md:flex-row gap-6 items-start">
+            <span class="text-3xl p-3 bg-white/[0.03] border border-white/5 rounded-2xl shrink-0">🔥</span>
+            <div>
+              <h3 class="text-lg font-bold text-white mb-2">Priority Sentiment Flagging</h3>
+              <p class="text-zinc-400 text-xs leading-relaxed font-light">If you send 1,000s of messages, our system detects "interested" sentiments and flags them immediately. Zero time wasted wading through complaints or confusion.</p>
+            </div>
+          </div>
+          <div class="bg-[#111215] rounded-[2rem] p-8 border border-white/[0.06] flex flex-col md:flex-row gap-6 items-start">
+            <span class="text-3xl p-3 bg-white/[0.03] border border-white/5 rounded-2xl shrink-0">🔁</span>
+            <div>
+              <h3 class="text-lg font-bold text-white mb-2">Non-Reply Follow-ups</h3>
+              <p class="text-zinc-400 text-xs leading-relaxed font-light">Quickly build second-step campaigns targeting only leads who didn't respond to the first message. The system auto-excludes active DNCs so you stay compliant.</p>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Pricing Section -->
-    <section id="pricing" class="py-24 bg-white font-[Poppins]">
+    <!-- ═══════════ PRICING ═══════════ -->
+    <section id="pricing" class="py-24 bg-white relative z-10">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-16">
           <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-zinc-50 border border-zinc-200 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-8 shadow-sm">
-            Simple Pricing
+            Fair & Transparent
           </div>
           <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight text-zinc-900 leading-[1.05]">
-            Free to start.<br />
-            <span class="font-['Instrument_Serif'] italic font-normal text-zinc-500">Pro when you're ready.</span>
+            Simple plans.<br />
+            <span class="font-['Instrument_Serif'] italic font-normal text-zinc-500">For growth at any scale.</span>
           </h2>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          <!-- Free Plan -->
-          <div class="relative bg-white rounded-[2rem] p-8 md:p-10 border border-zinc-200 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <div class="mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <!-- Free -->
+          <div class="bg-white rounded-[2rem] p-10 border border-zinc-200 shadow-sm flex flex-col justify-between">
+            <div>
               <h3 class="text-lg font-bold text-zinc-900 mb-1">Starter</h3>
-              <div class="flex items-baseline gap-1 mb-3">
+              <div class="flex items-baseline gap-1 mb-6">
                 <span class="text-4xl font-bold text-zinc-900">$0</span>
                 <span class="text-zinc-400 text-sm">/mo</span>
               </div>
-              <p class="text-sm text-zinc-500 font-light">Perfect for getting started — send texts, manage contacts, see what works.</p>
+              <ul class="space-y-4 mb-10 text-sm text-zinc-600">
+                <li class="flex items-center gap-3"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> CSV Contact Import</li>
+                <li class="flex items-center gap-3"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> 2-way messaging inbox</li>
+                <li class="flex items-center gap-3"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Standard campaigns</li>
+                <li class="flex items-center gap-3"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Up to 500 contacts</li>
+              </ul>
             </div>
-            <div class="space-y-3 mb-8">
-              {#each ['Multi-brand messaging', '2-way inbox', 'Contact groups', 'Campaign builder', 'Basic delivery stats', 'Up to 500 contacts'] as feat}
-                <div class="flex items-center gap-3 text-sm text-zinc-700">
-                  <svg class="w-4 h-4 text-zinc-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                  {feat}
-                </div>
-              {/each}
-            </div>
-            <button on:click={() => goto('/signup')} class="w-full py-3.5 rounded-xl font-semibold text-sm bg-zinc-100 text-zinc-900 hover:bg-zinc-200 transition-all">
-              Get Started Free
-            </button>
+            <button on:click={() => goto('/signup')} class="w-full py-4 rounded-xl bg-zinc-900 text-white font-bold hover:bg-zinc-800 transition-all">Get Started Free</button>
           </div>
 
-          <!-- Pro Plan -->
-          <div class="relative bg-zinc-900 text-white rounded-[2rem] p-8 md:p-10 overflow-hidden shadow-2xl">
-            <div class="absolute -top-10 -right-10 w-60 h-60 bg-white/5 rounded-full blur-[60px] pointer-events-none"></div>
-            <div class="absolute -bottom-10 -left-10 w-60 h-60 bg-white/5 rounded-full blur-[60px] pointer-events-none"></div>
-            <div class="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E');"></div>
+          <!-- Pro -->
+          <div class="bg-[#111215] text-white rounded-[2rem] p-10 border border-white/[0.06] shadow-2xl relative overflow-hidden flex flex-col justify-between">
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-[50px]"></div>
             <div class="relative z-10">
-              <div class="inline-flex items-center gap-2 bg-white/10 border border-white/20 text-white/80 text-xs font-bold px-3 py-1.5 rounded-full mb-6 uppercase tracking-wider">
-                ✦ Most Popular
-              </div>
-              <h3 class="text-lg font-bold mb-1">Pro</h3>
-              <div class="flex items-baseline gap-1 mb-3">
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-6">Most Popular</div>
+              <h3 class="text-lg font-bold mb-1">Pro + AI</h3>
+              <div class="flex items-baseline gap-1 mb-6">
                 <span class="text-4xl font-bold">$19.99</span>
-                <span class="text-white/50 text-sm">/mo</span>
+                <span class="text-zinc-500 text-sm">/mo</span>
               </div>
-              <p class="text-sm text-white/60 font-light mb-8">Let AI handle the busywork so you can focus on growing.</p>
-              <div class="space-y-3 mb-8">
-                {#each ['Everything in Starter', 'AI-powered DNC detection', 'Smart follow-up campaigns', 'Campaign insights & analytics', 'AI sentiment analysis', 'Priority support', 'Unlimited contacts'] as feat}
-                  <div class="flex items-center gap-3 text-sm text-white/80">
-                    <div class="w-5 h-5 rounded-full bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0">
-                      <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                    </div>
-                    {feat}
-                  </div>
-                {/each}
-              </div>
-              <button on:click={() => goto('/signup')} class="w-full py-3.5 rounded-xl font-bold text-sm bg-white text-zinc-900 hover:bg-zinc-100 transition-all shadow-lg hover:shadow-xl hover:scale-[1.02]">
-                Start Pro Trial
-              </button>
+              <ul class="space-y-4 mb-10 text-sm text-zinc-400">
+                <li class="flex items-center gap-3"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Auto-flag DNC (opt-outs)</li>
+                <li class="flex items-center gap-3"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Sentiment flagging (Interested leads)</li>
+                <li class="flex items-center gap-3"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Smart non-reply follow-ups</li>
+                <li class="flex items-center gap-3"><svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Unlimited contacts & advanced stats</li>
+              </ul>
             </div>
+            <button on:click={() => goto('/signup')} class="w-full py-4 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20">Start Pro Trial</button>
           </div>
-        </div>
-
-        <!-- Custom CTA -->
-        <div class="mt-12 text-center">
-          <p class="text-sm text-zinc-500 font-light">
-            Want a fully custom setup — AI receptionist, CRM integration, the works? <a href="https://flowjoy.online" target="_blank" rel="noopener noreferrer" class="text-zinc-800 font-medium hover:text-zinc-900 underline underline-offset-2 decoration-zinc-300 hover:decoration-zinc-500 transition-colors">See what Flowjoy can build for you →</a>
-          </p>
         </div>
       </div>
     </section>
 
     <!-- Footer -->
-    <footer class="bg-[#0A0A0B] text-zinc-400 py-16 pt-24 relative overflow-hidden font-[Poppins] border-t border-white/5">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-8 mb-24">
-          <div class="md:col-span-5 lg:col-span-4 flex flex-col items-start gap-5">
-            <div class="flex items-center gap-3 text-white">
-              <div class="w-8 h-8 rounded-xl bg-white flex items-center justify-center text-[#09090B] font-bold text-xl">B</div>
-              <span class="font-bold text-xl tracking-tight">Broadr</span>
-            </div>
-            <p class="text-sm font-light">Built by <a href="https://flowjoy.online" target="_blank" rel="noopener noreferrer" class="text-white/70 hover:text-white transition-colors">Flowjoy</a> · © {new Date().getFullYear()}</p>
-          </div>
-          <div class="md:col-span-7 lg:col-span-8 flex flex-wrap md:justify-end gap-16 lg:gap-32">
-            <div class="flex flex-col gap-4">
-              <h4 class="text-white text-xs font-bold tracking-widest uppercase mb-1">Product</h4>
-              <a href="#pricing" class="text-sm hover:text-white transition-colors">Pricing</a>
-              <button on:click={() => goto('/signup')} class="text-sm text-left hover:text-white transition-colors">Get Started</button>
-              <button on:click={() => goto('/login')} class="text-sm text-left hover:text-white transition-colors">Login</button>
-            </div>
-            <div class="flex flex-col gap-4">
-              <h4 class="text-white text-xs font-bold tracking-widest uppercase mb-1">Company</h4>
-              <a href="https://flowjoy.online" target="_blank" rel="noopener noreferrer" class="text-sm hover:text-white transition-colors">Flowjoy</a>
-            </div>
-          </div>
+    <footer class="bg-[#09090B] border-t border-white/[0.04] py-16 text-center">
+      <div class="max-w-7xl mx-auto px-4">
+        <div class="flex items-center justify-center gap-3 mb-8">
+          <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-zinc-900 font-bold text-xl">B</div>
+          <span class="text-white font-bold text-2xl tracking-tight">Broadr</span>
         </div>
-        <div class="w-full flex justify-center items-end opacity-[0.12] pointer-events-none select-none overflow-hidden relative -mb-16 md:-mb-24">
-          <h1 class="font-['Poppins'] font-black text-[12rem] md:text-[22rem] lg:text-[28rem] leading-[0.75] tracking-tighter text-transparent" style="-webkit-text-stroke: 3px rgba(255,255,255,0.5);">
-            Broadr
-          </h1>
-        </div>
+        <p class="text-zinc-500 text-sm font-light">
+          Built by <a href="https://flowjoy.online" class="text-white hover:text-emerald-400 transition-colors">Flowjoy</a> · © {new Date().getFullYear()}
+        </p>
       </div>
     </footer>
 
@@ -432,6 +433,105 @@
 {/if}
 
 <style>
+  /* ── Prism container ── */
+  .prism-wrap {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+    clip-path: inset(0);
+    filter: blur(80px) saturate(1.8);
+    opacity: 0.45;
+  }
+
+  .prism-blob {
+    position: absolute;
+    border-radius: 50%;
+    will-change: transform;
+  }
+
+  .prism-1 {
+    width: 45%;
+    height: 55%;
+    top: -15%;
+    left: -8%;
+    background: conic-gradient(from 0deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #ff6b6b);
+    animation: drift1 18s ease-in-out infinite;
+  }
+
+  .prism-2 {
+    width: 40%;
+    height: 50%;
+    bottom: -20%;
+    right: -10%;
+    background: conic-gradient(from 120deg, #0abde3, #a29bfe, #fd79a8, #fdcb6e, #0abde3);
+    animation: drift2 22s ease-in-out infinite;
+  }
+
+  .prism-3 {
+    width: 30%;
+    height: 40%;
+    top: 30%;
+    right: 15%;
+    background: conic-gradient(from 240deg, #6c5ce7, #00cec9, #e17055, #74b9ff, #6c5ce7);
+    animation: drift3 25s ease-in-out infinite;
+  }
+
+  .prism-4 {
+    width: 25%;
+    height: 35%;
+    bottom: 10%;
+    left: 20%;
+    background: conic-gradient(from 60deg, #fd79a8, #fdcb6e, #00b894, #e84393, #fd79a8);
+    animation: drift4 20s ease-in-out infinite;
+  }
+
+  @keyframes drift1 {
+    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    33% { transform: translate(8%, 12%) rotate(40deg) scale(1.08); }
+    66% { transform: translate(-5%, 6%) rotate(-20deg) scale(0.95); }
+  }
+  @keyframes drift2 {
+    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    33% { transform: translate(-10%, -8%) rotate(-35deg) scale(1.1); }
+    66% { transform: translate(6%, -4%) rotate(25deg) scale(0.92); }
+  }
+  @keyframes drift3 {
+    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    50% { transform: translate(-12%, 10%) rotate(50deg) scale(1.12); }
+  }
+  @keyframes drift4 {
+    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+    40% { transform: translate(10%, -6%) rotate(-30deg) scale(1.05); }
+    70% { transform: translate(-8%, 8%) rotate(20deg) scale(0.98); }
+  }
+
+  .noise-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: 0.1;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ── Custom Scrollbar for Chat History ── */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
   .page {
     min-height: 100vh;
     display: flex;
@@ -447,7 +547,7 @@
     width: 2rem;
     height: 2rem;
     border: 3px solid rgba(255,255,255,0.08);
-    border-top-color: #6366f1;
+    border-top-color: #10b981;
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -463,10 +563,10 @@
   .logo {
     width: 52px; height: 52px;
     border-radius: 14px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: #18181b;
     display: flex; align-items: center; justify-content: center;
     margin: 0 auto 1.25rem;
-    box-shadow: 0 8px 24px rgba(99,102,241,0.25);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
   }
 
   .title {
@@ -477,21 +577,16 @@
     font-size: 0.875rem; color: #71717a; margin: 0 0 1.5rem; line-height: 1.5;
   }
 
-  .actions {
-    display: flex; justify-content: center; gap: 0.75rem;
-  }
+  .actions { display: flex; justify-content: center; gap: 0.75rem; }
 
   .btn-primary {
     display: inline-flex; align-items: center; gap: 0.5rem;
     padding: 0.65rem 1.25rem; border-radius: 9px; border: none;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: #10b981;
     color: white; font-size: 0.875rem; font-weight: 600;
     cursor: pointer; transition: all 0.2s;
   }
-  .btn-primary:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(99,102,241,0.3);
-  }
+  .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(16,185,129,0.3); }
   .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .btn-ghost {
@@ -502,53 +597,17 @@
     font-size: 0.875rem; font-weight: 500;
     cursor: pointer; transition: all 0.15s;
   }
-  .btn-ghost:hover:not(:disabled) {
-    background: rgba(255,255,255,0.05);
-    border-color: rgba(255,255,255,0.15);
-    color: #e4e4e7;
-  }
+  .btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.05); color: #e4e4e7; }
   .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* Form */
-  .form {
-    text-align: left;
-    display: flex; flex-direction: column; gap: 1rem;
-    margin-top: 0.5rem;
-  }
-  .form-group {
-    display: flex; flex-direction: column; gap: 0.3rem;
-  }
-  .form-group label {
-    font-size: 0.75rem; font-weight: 600; color: #a1a1aa;
-    text-transform: uppercase; letter-spacing: 0.04em;
-  }
-  .form-group input {
-    padding: 0.7rem 0.9rem; border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.1);
-    background: rgba(255,255,255,0.04); color: #f4f4f5;
-    font-size: 0.9rem; outline: none; transition: all 0.15s;
-  }
-  .form-group input::placeholder { color: #3f3f46; }
-  .form-group input:focus {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
-  }
-  .form-group input:disabled { opacity: 0.5; }
-  .hint { font-size: 0.7rem; color: #52525b; }
+  .form { text-align: left; display: flex; flex-direction: column; gap: 1rem; margin-top: 0.5rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.3rem; }
+  .form-group label { font-size: 0.75rem; font-weight: 600; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.04em; }
+  .form-group input { padding: 0.7rem 0.9rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: #f4f4f5; font-size: 0.9rem; outline: none; transition: all 0.15s; }
+  .form-group input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.12); }
+  .form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.25rem; }
 
-  .form-actions {
-    display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.25rem;
-  }
+  .btn-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
 
-  .btn-spinner {
-    width: 14px; height: 14px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: white; border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-  }
-
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
