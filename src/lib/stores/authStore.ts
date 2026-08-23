@@ -46,22 +46,51 @@ function createAuthStore() {
          * Call this on app startup to restore the session.
          */
         async initialize(): Promise<void> {
-            // Dev override: bypass auth and automatically log in a mock user
+            const token = getStoredToken();
+            
+            if (!token) {
+                update(state => ({
+                    ...state,
+                    isInitialized: true
+                }));
+                return;
+            }
+
             update(state => ({
                 ...state,
-                user: {
-                    id: 'mock-user-id',
-                    email: 'dev@flowjoy.com',
-                    role: 'admin',
-                    has_twilio: true
-                } as any,
-                token: 'mock-token',
-                isLoading: false,
-                isInitialized: true,
+                isLoading: true,
                 error: null
             }));
-            console.log('[AuthStore] Auth bypassed for development');
-            return;
+
+            try {
+                // Set token in state so the API client reads it
+                update(state => ({
+                    ...state,
+                    token
+                }));
+
+                const user = await authApi.getMe();
+                
+                update(state => ({
+                    ...state,
+                    user,
+                    isLoading: false,
+                    isInitialized: true,
+                    error: null
+                }));
+                console.log('[AuthStore] Session restored:', user.email);
+            } catch (error) {
+                console.error('[AuthStore] Session restore failed:', error);
+                clearStoredToken();
+                update(state => ({
+                    ...state,
+                    user: null,
+                    token: null,
+                    isLoading: false,
+                    isInitialized: true,
+                    error: error instanceof Error ? error.message : 'Session expired'
+                }));
+            }
         },
 
         /**

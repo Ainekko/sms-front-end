@@ -1,30 +1,22 @@
-# SvelteKit
+# Broadr SMS Frontend — SvelteKit & Tailwind CSS
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte), deployed to [Vercel](https://vercel.com).
+This is the SvelteKit client dashboard for the Broadr SMS Marketing Platform, communicating with the FastAPI backend to visualize campaign metrics and schedule SMS outreach.
 
-## Deploy Your Own
+## 🚀 Key Features
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fvercel%2Ftree%2Fmain%2Fexamples%2Fsveltekit&project-name=sveltekit-vercel&repository-name=sveltekit-vercel&demo-title=SvelteKit%20%2B%20Vercel&demo-description=A%20SvelteKit%20app%20optimized%20Edge-first.&demo-url=https%3A%2F%2Fsveltekit-template.vercel.app%2F)
+- **Dynamic Campaign Analytics**: Charts tracking real-time delivery and click-through statistics.
+- **Bulk CSV Upload Wizard**: Seamless client interface mapping to the backend validation pipeline.
+- **B2B Contact CRM**: List view of verified contacts, filtering invalid or blacklisted numbers.
+- **Active Chat Center**: Real-time conversation threads showing incoming Twilio replies and letting operators reply directly.
 
-_Live Example: https://sveltekit-template.vercel.app_
+## ⚙️ Development Commands
 
-## Developing
-
-Once you've installed dependencies with `pnpm install`, start a development server:
-
+This project uses `pnpm` for packages:
 ```bash
+# Install dependencies
+pnpm install
+
+# Start local server
 pnpm run dev
-
-# or start the server and open the app in a new browser tab
-pnpm run dev -- --open
 ```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-pnpm run build
-```
-
-You can preview the production build with `npm run preview`.
+Ensure you have configured a `.env` file containing `VITE_API_BASE_URL` pointing to your running backend API.

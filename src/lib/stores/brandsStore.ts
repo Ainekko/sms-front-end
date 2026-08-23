@@ -352,24 +352,12 @@ function transformContact(response: BrandContactResponse): BrandContact {
 // Actions
 // =============================================================================
 
-/**
- * Load all brands from the API.
- */
 export async function loadBrands(): Promise<void> {
     brandsStore.setLoading();
 
     try {
-        const mockBrandData = [
-            {
-                id: 'mock-brand-123',
-                name: 'Broadr Dev Brand',
-                phone_number: '+15551234567',
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            }
-        ];
-        const brands = mockBrandData.map(transformBrand);
+        const response = await brandsApi.listBrands();
+        const brands = response.map(transformBrand);
         brandsStore.setBrands(brands);
 
         // Auto-select first brand if none selected
